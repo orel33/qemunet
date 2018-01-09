@@ -1,0 +1,17 @@
+### VLAN
+
+#                                    
+#                               opeth grave (VLAN 200)
+#                                 \   / 
+#                                  [s1] ----- immortal 
+#                                 /    \
+#                                syl nile (VLAN 100)
+# 
+
+SWITCH s1
+HOST debian  syl      s1:100
+HOST debian  nile     s1:100
+HOST debian  opeth    s1:200
+HOST debian  grave    s1:200
+HOST debian  immortal s1
+

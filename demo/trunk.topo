@@ -1,0 +1,20 @@
+### VLAN trunking
+
+#
+#                             opeth(VLAN 200)  grave(VLAN 200)
+#                                 \              / 
+#                      immortal - [s1] -------- [s2] 
+#                                 /              \
+#                              syl(VLAN 100)   nile(VLAN 100)
+# 
+
+SWITCH s1
+SWITCH s2
+TRUNK  s1 s2 
+
+HOST debian  syl      s1:100
+HOST debian  nile     s2:100
+HOST debian  opeth    s1:200
+HOST debian  grave    s2:200
+HOST debian  immortal s1
+

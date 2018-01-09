@@ -1,0 +1,25 @@
+### DMZ
+
+#                                    
+#                               opeth grave 
+#                                 |    |
+#                                [s1] [s4]
+#                                  \   /
+#                                 immortal
+#                                  /   \
+#                                [s2]  [s3]
+#                                /  \   |
+#                              syl  dt nile
+# 
+
+SWITCH s1
+SWITCH s2   
+SWITCH s3   
+SWITCH s4   
+HOST debian  immortal s1 s2 s3 s4
+HOST debian  opeth    s1       
+HOST debian  syl      s2
+HOST debian  dt       s2
+HOST debian  nile     s3
+HOST debian  grave    s4
+

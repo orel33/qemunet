@@ -1,0 +1,14 @@
+### WIN
+
+SWITCH s1
+SWITCH s2
+HOST debian syl s1
+HOST debian nile s1
+HOST debian immortal s1 s2 
+HOST win10 win10 s2
+
+
+
+
+
+
