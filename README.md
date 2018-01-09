@@ -52,7 +52,7 @@ Be careful, all the modifications will be saved definitely in the raw image of t
 
 ### Documentation ###
 
-http://qemunet.gforge.inria.fr/wiki/doku.php
+https://gitlab.inria.fr/qemunet/core/wikis/documentation
 
 ---
 aurelien.esnard@u-bordeaux.fr
