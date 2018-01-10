@@ -21,34 +21,37 @@ Moreover, one requires *Bash* version greater than or equal to 4.
 
 ### Download & Install ###
 
-QemuNet is a free software distributed under the terms of the GNU General Public License (GPL) and it is available for download at [Inria GitLab](https://gitlab.inria.fr/qemunet). A basic installation of QemuNet consists of two parts: the *core* and the *images*.
-
-```
-qemunet
-    ├── core
-    └── images
-```
+QemuNet is a free software distributed under the terms of the GNU General Public License (GPL) and it is available for download at [Inria GitLab](https://gitlab.inria.fr/qemunet). 
 
 Let's download it:
 
 ```
-  $ mkdir qemunet ; cd qemunet
-  $ git clone https://gitlab.inria.fr/qemunet/core.git core
-  $ git clone https://gitlab.inria.fr/qemunet/images.git images
+  $ git clone https://gitlab.inria.fr/qemunet/core.git qemunet
 ```
 
-If the runtime commands required by *QemuNet* (qemu-system-x86_64, qemu-img and vde_switch) are not available in standard directory, you will need to edit the main script *core/qemunet.sh*.
+The main QemuNet files are described below:
+
+```
+qemunet
+  ├── demo/         <-- some basic examples of topology 
+  ├── images/       <-- default directory for system images
+  ├── qemunet.cfg   <-- the default qemunet configuration file
+  ├── qemunet.sh    <-- main qemunet script
+  └── README.md     <-- this file
+```
+
+By default, the *images* directory is empty. The default system images (described ni *qemunet.cfg) will be automatically download by the QemuNet script at the first execution. These QEMU images are available on [Inria GitLab](https://gitlab.inria.fr/qemunet/images).
 
 ### Test ###
 
-Then you can launch the following *simple tests*  based on a *Linux TinyCore* system or a *Linux Debian* system. These QEMU images are available on [Inria GitLab](https://gitlab.inria.fr/qemunet/images), but they will be automatically download by the QemuNet script if you need it.
+Now, you can launch the following *simple tests*  based on a *Linux TinyCore* system or a *Linux Debian* system. 
 
 ```
-$ ./qemunet.sh -t images/tinycore/one.topo
-$ ./qemunet.sh -t images/debian/lan4.topo  
+$ ./qemunet.sh -t demo/tinycore.topo
+$ ./qemunet.sh -t demo/single.topo  
 ```
 
-Then, you can start to play.
+If the runtime commands required by *QemuNet* (qemu-system-x86_64, qemu-img and vde_switch) are not available in standard directory, you will need to edit the main script *qemunet.sh*.
 
 ### Let's start with a basic LAN ###
 
@@ -66,16 +69,16 @@ HOST debian host3 s1
 HOST debian host4 s1
 ```
 
-Here is an example of the *QemuNet* configuration file //qemunet.cfg//. It requires to provide a valid Debian image for QEMU. Optionnaly, you will need to extract the kernel files (initrd & vmlinuz) from this image, as explained later. See below to know how to build his own Debian image for QEMU.
+Here is an example of the *QemuNet* configuration file *qemunet.cfg*. It requires to provide a valid Debian image for QEMU. Optionnaly, you will need to extract the kernel files (initrd & vmlinuz) from this image, as explained later. 
 
 ```
 IMGDIR="/absolute/path/to/raw/system/images"
 SYS[debian]="linux"
 FS[debian]="$IMGDIR/debian/debian.img"
+KERNEL[debian]="$IMGDIR/debian/debian.vmlinuz"
+INITRD[debian]="$IMGDIR/debian/debian.initrd"
 QEMUOPT[debian]="-localtime -m 512"
-KERNEL[debian]="$IMGDIR/debian/vmlinuz"
-INITRD[debian]="$IMGDIR/debian/initrd"
-URL[debian]="https://gitlab.inria.fr/qemunet/images/raw/master/debian/debian.tgz"
+URL[debian]="https://gitlab.inria.fr/qemunet/images/raw/master/debian.tgz"
 ```
 
 Following, you can launch your Virtual Network (VN). All the current session files are provided in the *session* directory, that is linked to a unique directory in /tmp. 
@@ -201,7 +204,7 @@ The SYS and FS arrays are required for each system. They respectively define the
 
 ### How to use my own image in QemuNet? ###
 
-Instead of using the default GIT repository for *images*, you should prefer to install your own images in the *images* subdirectory (or elsewhere). In this case, you will need to update the configuration file provided in *core/qemunet.cfg*. Please visit this [wiki](http://aurelien.esnard.emi.u-bordeaux.fr/teaching/doku.php?id=qemunet:index) for further details.
+Instead of using the default GIT repository for *images*, you should prefer to install your own images in the *images* subdirectory (or elsewhere). In this case, you will need to update the configuration file provided in *qemunet.cfg*. Please visit this [wiki](http://aurelien.esnard.emi.u-bordeaux.fr/teaching/doku.php?id=qemunet:index) for further details.
 
 ### Documentation ###
 

@@ -27,6 +27,7 @@ QEMUIMG="qemu-img"
 VDESWITCH="vde_switch"
 SOCAT="socat"
 WGET="wget"
+# TERMCMD=""
 
 ### QEMUNET CONFIG ###
 
@@ -332,8 +333,8 @@ LOADCONF() {
     for SYSNAME in "${!FS[@]}"; do
         echo "[$SYSNAME]"
         echo "* SYS = ${SYS[$SYSNAME]}"
+        echo "* QEMU OPT = ${QEMUOPT[$SYSNAME]}"	
         echo "* FS = ${FS[$SYSNAME]}"
-        echo "* QEMU OPT = ${QEMUOPT[$SYSNAME]}"
         if [ ${KERNEL[$SYSNAME]+_} ]; then echo "* KERNEL = ${KERNEL[$SYSNAME]}" ; fi
         if [ ${INITRD[$SYSNAME]+_} ]; then echo "* INITRD = ${INITRD[$SYSNAME]}" ; fi
         if [ ${URL[$SYSNAME]+_} ]; then echo "* URL = ${URL[$SYSNAME]}" ; fi
@@ -353,7 +354,7 @@ LOADCONF() {
         # Uncompress disk image
         if [ -r "$HOSTFSTGZ" -a ! -r "$HOSTFS" ] ; then
             echo "=> Extracting disk image from archive for system $SYSNAME. Please, be patient..."
-            tar xvf $HOSTFSTGZ -C $HOSTFSDIR
+            tar xvzf $HOSTFSTGZ -C $HOSTFSDIR
         fi
 
         # CHECK CONF
