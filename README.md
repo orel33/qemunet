@@ -3,9 +3,21 @@ QemuNet
 
 QemuNet is a light shell script based on QEMU and VDE to enable easy virtual networking.
 
+### Install
+
+```
+  $ mkdir qemunet ; cd qemunet
+  $ git clone https://gitlab.inria.fr/qemunet/core.git core
+  $ git clone https://gitlab.inria.fr/qemunet/images.git images
+```
+
+Instead of using the default GIT repository for images, you should
+prefer to install your own images in this directory. In this case, you will need to update the configuration file core/qemunet.cfg.
+
 ### Quick Examples
 
 Launch a single Linux TinyCore VM:
+
 ```
 $ ./qemunet.sh -i -t images/tinycore/one.topo 
 ```
@@ -52,7 +64,7 @@ Be careful, all the modifications will be saved definitely in the raw image of t
 
 ### Documentation ###
 
-https://gitlab.inria.fr/qemunet/core/wikis/home
+The full documentation is available online on [Inria GitLab](https://gitlab.inria.fr/qemunet/core/wikis/home).
 
 ---
 aurelien.esnard@u-bordeaux.fr
