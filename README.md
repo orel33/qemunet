@@ -5,19 +5,25 @@ QemuNet
 
 ### Requirements ###
 
-*QemuNet* requires to fulfill some software dependencies. You can install it in a Debian-like OS, as follow: 
+First of all, the QemuNet script is written in *Bash* version greater than or equal to 4. Then, you can install all the QemuNet dependencies in a Debian-like OS, as follow: 
 
 ```
-$ sudo apt-get install qemu qemu-kvm vde2 libattr1 libvirt0 socat rlwrap wget  
+$ sudo apt-get install qemu qemu-kvm vde2 libattr1 libvirt0 socat rlwrap wget virt-manager
 ```
 
-*QemuNet* requires QEMU (qemu-system-x86_64) with VDE and KVM supports enabled and with a *version greater than or equal to 2.1*!!! Check it:
+In practice, *QemuNet* requires QEMU (qemu-system-x86_64) with VDE and KVM supports enabled and with a *version greater than or equal to 2.1*!!! Check it:
 
 ```
 $ qemu-system-x86_64 --version  
 ```
 
-Moreover, one requires *Bash* version greater than or equal to 4.
+By default *QemuNet* use the KVM support, to speed up the QEMU execution. To check if KVM is well installed, you can launch the following commmand. 
+
+```
+$ virt-host-validate qemu
+```
+
+If the KVM test fails, we recommand you to solve this problem before to use *QemuNet*. The -K option provided by *qemunet.sh* disables KVM, but it will be really too slow. For further details on KVM: https://wiki.archlinux.org/index.php/KVM
 
 ### Download & Install ###
 
@@ -51,7 +57,7 @@ $ ./qemunet.sh -t demo/tinycore.topo
 $ ./qemunet.sh -t demo/single.topo  
 ```
 
-If the runtime commands required by *QemuNet* (qemu-system-x86_64, qemu-img and vde_switch) are not available in standard directory, you will need to edit the main script *qemunet.sh*.
+At this point, if you get some errors, got the *Configuration" section.
 
 ### Let's start with a basic LAN ###
 
@@ -74,10 +80,10 @@ Here is an example of the *QemuNet* configuration file *qemunet.cfg*. It require
 ```
 IMGDIR="/absolute/path/to/raw/system/images"
 SYS[debian]="linux"
+QEMUOPT[debian]="-localtime -m 512"
 FS[debian]="$IMGDIR/debian/debian.img"
 KERNEL[debian]="$IMGDIR/debian/debian.vmlinuz"
 INITRD[debian]="$IMGDIR/debian/debian.initrd"
-QEMUOPT[debian]="-localtime -m 512"
 URL[debian]="https://gitlab.inria.fr/qemunet/images/raw/master/debian.tgz"
 ```
 
@@ -188,16 +194,15 @@ VDESWITCH="/usr/bin/vde_switch"
 Then, you have to provide a configuration file that defines several virtual systems and its parameters (name, type, disk image file, ...). The default configuration file is *[qemunet.cfg](https://gitlab.inria.fr/qemunet/core/raw/master/qemunet.cfg). It is a bash script that uses associative arrays (bash 4 or greater required). Here is a template file:
 
 ```
-if [ -z "$IMGDIR" ] ; then IMGDIR="$(dirname $(realpath $0))" ; fi
 # IMGDIR="/absolute/path/to/raw/system/images"
+IMGDIR=$(realpath images)
 
-# Template
 SYS[sysname]="linux|windows|..."
-FS[sysname]="/absolute/path/to/raw/system/image"
 QEMUOPT[sysname]="qemu extra options"
-KERNEL[sysname]="/absolute/path/to/system/kernel"  # optional, required for -x option
-INITRD[sysname]="/absolute/path/to/system/initrd"  # optional, required for -x option
-URL[sysname]="http://.../sysname.tgz"              # optional, url to download a system image archive
+FS[sysname]="/absolute/path/to/raw/system/sysname.img"
+KERNEL[sysname]="/absolute/path/to/system/sysname.vmlinuz"  # optional, required for -x option
+INITRD[sysname]="/absolute/path/to/system/sysname.initrd"   # optional, required for -x option
+URL[sysname]="http://url/where/to/find/sysname.tgz"         # optional, url to download sysname.tgz (including FS, KERNEL and INITRD)
 ```
 
 The SYS and FS arrays are required for each system. They respectively define the system type (linux, windows, ...) and the QEMU disk image file (in raw format). QEMUOPT can be used to pass additional options to QEMU when launching the VM, as for instance cpu type or max memory. See QEMU documentation for detailed options. Both KERNEL and INITRD are optional for linux system, but required if you want to launch the VMs in xterm (option -x).
