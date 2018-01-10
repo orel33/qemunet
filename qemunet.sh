@@ -178,7 +178,7 @@ CHECKRC() {
     echo "WGET: $WGET"
 
     # check QEMU version >= 2.1
-    QEMUVERSION=$($QEMU --version | cut -d ' ' -f4)
+    QEMUVERSION=$($QEMU --version |head -1 | cut -d ' ' -f4-)
     QEMUMAJOR=$(echo $QEMUVERSION | cut -d '.' -f1)
     QEMUMINOR=$(echo $QEMUVERSION | cut -d '.' -f2)
     echo "QEMU VERSION: $QEMUMAJOR.$QEMUMINOR ($QEMUVERSION)"
