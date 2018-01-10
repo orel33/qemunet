@@ -46,18 +46,18 @@ qemunet
   └── README.md     <-- this file
 ```
 
-By default, the *images* directory is empty. The default system images (described ni *qemunet.cfg) will be automatically download by the QemuNet script at the first execution. These QEMU images are available on [Inria GitLab](https://gitlab.inria.fr/qemunet/images).
+By default, the *images* directory is empty. The default system images (described in *qemunet.cfg*) will be automatically download by the QemuNet script at first use. The default *QemuNet* images are available on [Inria GitLab](https://gitlab.inria.fr/qemunet/images).
 
 ### Test ###
 
-Now, you can launch the following *simple tests*  based on a *Linux TinyCore* system or a *Linux Debian* system. 
+Now, you can launch the following tests, that are  based on a *Linux TinyCore* system or a *Linux Debian* system. 
 
 ```
 $ ./qemunet.sh -t demo/tinycore.topo
 $ ./qemunet.sh -t demo/single.topo  
 ```
 
-At this point, if you get some errors, got the *Configuration" section.
+At this point, if you get some errors, go to the *Configuration" section.
 
 ### Let's start with a basic LAN ###
 
