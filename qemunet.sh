@@ -336,19 +336,31 @@ LOADCONF() {
         echo "[$SYSNAME]"
         echo "* SYS = ${SYS[$SYSNAME]}"
         echo "* QEMU OPT = ${QEMUOPT[$SYSNAME]}"	
-        echo "* FS = ${FS[$SYSNAME]}"
-        if [ ${KERNEL[$SYSNAME]+_} ]; then echo "* KERNEL = ${KERNEL[$SYSNAME]}" ; fi
-        if [ ${INITRD[$SYSNAME]+_} ]; then echo "* INITRD = ${INITRD[$SYSNAME]}" ; fi
-        if [ ${URL[$SYSNAME]+_} ]; then echo "* URL = ${URL[$SYSNAME]}" ; fi
 
         HOSTFS="${FS[$SYSNAME]}"
+	HOSTKERNEL="${KERNEL[$SYSNAME]}"
+        HOSTINITRD="${INITRD[$SYSNAME]}"		
+	HOSTURL="${URL[$SYSNAME]}"
+
+	OKFS="⚠"
+	OKKERNEL="⚠"
+	OKINITRD="⚠"
+        if [ -r "$HOSTFS" ] ; then OKFS="✓" ; fi
+        if [ -r "$HOSTKERNEL" ] ; then OKKERNEL="✓" ; fi
+        if [ -r "$HOSTINITRD" ] ; then OKINITRD="✓" ; fi 	
+
+	echo "* FS = $HOSTFS $OKFS"
+        if [ ${KERNEL[$SYSNAME]+_} ]; then echo "* KERNEL = $HOSTKERNEL $OKKERNEL" ; fi  
+        if [ ${INITRD[$SYSNAME]+_} ]; then echo "* INITRD = $HOSTINITRD $OKINITRD" ; fi  
+        if [ ${URL[$SYSNAME]+_} ]; then echo "* URL = $HOSTURL" ; fi
+
         HOSTFSDIR=$(dirname  $HOSTFS)
         HOSTFSTGZ="$HOSTFSDIR/$SYSNAME.tgz"
 
         # CHECK CONF
-        if ! [ -r "$HOSTFS" ] ; then
-            echo "WARNING: Disk image file for system $SYSNAME is missing! Check your path?"
-        fi
+        # if ! [ -r "$HOSTFS" ] ; then
+        #    echo "WARNING: Disk image file for system $SYSNAME is missing! Check your path?"
+        # fi
 
     done
 
@@ -363,13 +375,20 @@ DOWNLOAD() {
     HOSTFS="${FS[$SYSNAME]}"
     HOSTFSDIR=$(dirname  $HOSTFS)
     HOSTFSTGZ="$HOSTFSDIR/$SYSNAME.tgz"
+    HOSTURL=${URL[$SYSNAME]}
+    
+    # FS OK
+    if [ -r "$HOSTFS" ] ; then return; fi
     
     # Download disk image
     if [ ${URL[$SYSNAME]+_} ] ; then
-        if [ ! -r "$HOSTFSTGZ" ] ; then
-            echo "=> Downloading disk image from web for system $SYSNAME. Please, be patient..."
-            $WGET --continue --show-progress -q -nc ${URL[$SYSNAME]} -O $HOSTFSTGZ
-        fi
+        # if [ ! -r "$HOSTFSTGZ" ] ; then
+        echo "=> Downloading \"$SYSNAME\" image from $HOSTURL..."
+        $WGET --continue --show-progress -q -nc $HOSTURL -O $HOSTFSTGZ
+        #fi
+    else
+	echo "ERROR: Raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system and no URL provided to download it!"
+	EXIT 
     fi
     
     # Uncompress disk image
