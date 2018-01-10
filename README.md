@@ -11,7 +11,7 @@ QemuNet
 $ sudo apt-get install qemu qemu-kvm vde2 libattr1 libvirt0 socat rlwrap wget  
 ```
 
-*QemuNet* requires QEMU (qemu-system-x86_64) with VDE and KVM supports enabled and with a **version greater than or equal to 2.1**. Check it:
+*QemuNet* requires QEMU (qemu-system-x86_64) with VDE and KVM supports enabled and with a *version greater than or equal to 2.1*!!! Check it:
 
 ```
 $ qemu-system-x86_64 --version  
