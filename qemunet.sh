@@ -27,8 +27,8 @@ QEMUIMG="qemu-img"
 VDESWITCH="vde_switch"
 SOCAT="socat"
 WGET="wget"
-# TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" }
-TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" }
+# TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # a trailing semicolon is required!
+TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" ; }
 
 ### QEMUNET CONFIG ###
 
