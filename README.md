@@ -34,7 +34,7 @@ The main QemuNet files are described below:
 ```
 qemunet
   ├── demo/         <-- some basic examples of topology 
-  ├── images/       <-- default directory for system images
+  ├── images/       <-- default empty directory to store system images
   ├── qemunet.cfg   <-- the default qemunet configuration file
   ├── qemunet.sh    <-- main qemunet script
   └── README.md     <-- this file
