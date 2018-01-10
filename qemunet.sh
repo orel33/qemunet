@@ -345,20 +345,6 @@ LOADCONF() {
         HOSTFSDIR=$(dirname  $HOSTFS)
         HOSTFSTGZ="$HOSTFSDIR/$SYSNAME.tgz"
 
-        # Download disk image
-        if [ ${URL[$SYSNAME]+_} ] ; then
-            if [ ! -r "$HOSTFSTGZ" ] ; then
-                echo "=> Downloading disk image from web for system $SYSNAME. Please, be patient..."
-                $WGET --show-progress -q -nc ${URL[$SYSNAME]} -O $HOSTFSTGZ
-            fi
-        fi
-
-        # Uncompress disk image
-        if [ -r "$HOSTFSTGZ" -a ! -r "$HOSTFS" ] ; then
-            echo "=> Extracting disk image from archive for system $SYSNAME. Please, be patient..."
-            tar xvzf $HOSTFSTGZ -C $HOSTFSDIR
-        fi
-
         # CHECK CONF
         if ! [ -r "$HOSTFS" ] ; then
             echo "WARNING: Disk image file for system $SYSNAME is missing! Check your path?"
@@ -367,6 +353,32 @@ LOADCONF() {
     done
 
 }
+
+### DOWNLOAD SYSTEM IMAGE ###
+
+DOWNLOAD() {
+
+    SYSNAME=$1
+    
+    HOSTFS="${FS[$SYSNAME]}"
+    HOSTFSDIR=$(dirname  $HOSTFS)
+    HOSTFSTGZ="$HOSTFSDIR/$SYSNAME.tgz"
+    
+    # Download disk image
+    if [ ${URL[$SYSNAME]+_} ] ; then
+        if [ ! -r "$HOSTFSTGZ" ] ; then
+            echo "=> Downloading disk image from web for system $SYSNAME. Please, be patient..."
+            $WGET --continue --show-progress -q -nc ${URL[$SYSNAME]} -O $HOSTFSTGZ
+        fi
+    fi
+    
+    # Uncompress disk image
+    if [ -r "$HOSTFSTGZ" -a ! -r "$HOSTFS" ] ; then
+        echo "=> Extracting disk image from archive for system $SYSNAME. Please, be patient..."
+        tar xvzf $HOSTFSTGZ -C $HOSTFSDIR
+    fi
+}
+
 
 ### QCOW FILE SYSTEM ###
 
@@ -509,6 +521,7 @@ HOST() {
     CMD="$CMD $HOSTOPT"
 
     # check system image file
+    if ! [ -r "$HOSTFS" ] ; then DOWNLOAD $SYSNAME ; fi
     if ! [ -r "$HOSTFS" ] ; then echo "ERROR: Raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system!"; EXIT ; fi
 
     # use raw or qcow2 system image
@@ -659,9 +672,9 @@ START() {
     echo "********** Waiting end of Session **********"
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSION"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
-    echo "=> To acces the QEMU monitor of host please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
+    echo "=> To acces the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
-    echo "=> You can save your session directory as follow: \"cd $SESSION ; tar cvzf mysession.tgz * ; cd -\""
+    echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"./qemunet.sh -s mysession.tgz\""    
     WAIT
     END
