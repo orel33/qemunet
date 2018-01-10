@@ -41,7 +41,7 @@ If the runtime commands required by *QemuNet* (qemu-system-x86_64, qemu-img and 
 
 ### Test ###
 
-Then you can launch the following __simple tests__  based on a *Linux TinyCore* system or a *Linux Debian* system. These QEMU images are available on [Inria GitLab](https://gitlab.inria.fr/qemunet/images), but they will be automatically download by the QemuNet script if you need it.
+Then you can launch the following *simple tests*  based on a *Linux TinyCore* system or a *Linux Debian* system. These QEMU images are available on [Inria GitLab](https://gitlab.inria.fr/qemunet/images), but they will be automatically download by the QemuNet script if you need it.
 
 ```
 $ ./qemunet.sh -t images/tinycore/one.topo
@@ -77,30 +77,9 @@ In the "chain" configuration, the network is well configured in
 /mnt/host/start.sh scripts, while in the "chain0" configuration, you
 have to do it by yourself.
 
-### Upgrade VM ###
+### Let's start with a basic LAN ###
 
-For instance, if you want to install new packages in the "debian"
-based image for instance... You can do it easily like this:
-
-```
-$ ./qemunet.sh -l debian
-```
-
-Then, in the VM, start network and install whatever you want...
-
-```
-$ dhclient eth0   # Internet access via Slirp interface of QEMU (no ping)
-$ apt-get install package1 package2 ...
-$ ...
-$ rm /etc/resolv.conf
-$ history -c
-```
-
-Be careful, all the modifications will be saved definitely in the raw image of the system (ie. images/debian/debian.img).
-
-### Examples ###
-
-You will find several examples in the **demo** subdirectory. But, let's start with a basic LAN topology.
+You will find several examples in the *demo* subdirectory. But, let's start with a basic LAN topology.
 
 First, you need to prepare a virtual topology file, as for example [demo/lan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/lan.topo). It describes a LAN with 4 *debian* Virtual Machines (VM), named *host1* to *host4* and one Virtual Switch (VS) named *s1*. The *debian* system must refer to a valid system in the *QemuNet* configuration file [qemunet.cfg](https://gitlab.inria.fr/qemunet/core/raw/master/qemunet.cfg).
 
@@ -119,10 +98,10 @@ Here is an example of the *QemuNet* configuration file //qemunet.cfg//. It requi
 ```
 IMGDIR="/absolute/path/to/raw/system/images"
 SYS[debian]="linux"
-FS[debian]="$IMGDIR/images/debian/debian.img"
+FS[debian]="$IMGDIR/debian/debian.img"
 QEMUOPT[debian]="-localtime -m 512"
-KERNEL[debian]="$IMGDIR/images/debian/vmlinuz"
-INITRD[debian]="$IMGDIR/images/debian/initrd"
+KERNEL[debian]="$IMGDIR/debian/vmlinuz"
+INITRD[debian]="$IMGDIR/debian/initrd"
 URL[debian]="https://gitlab.inria.fr/qemunet/images/raw/master/debian/debian.tgz"
 ```
 
@@ -135,23 +114,65 @@ Once you have finish your work, halt all machines properly with "poweroff" comma
 
 If you want to restore your session from the current session directory, you can simply type:
 
-`$ ./qemunet.sh -S session `
+```
+$ ./qemunet.sh -S session
+```
 
 In order to save your session, you need to save all session files in a tgz archive. 
 
-`$ cd session ; tar cvzf lan.tgz * ; cd .. `
+```
+$ cd session ; tar cvzf lan.tgz * ; cd ..
+```
 
 So, you will be able to restore your session later as follow:
 
-`$ ./qemunet.sh -s lan.tgz `
+```
+$ ./qemunet.sh -s lan.tgz
+```
   
-For instance, if you modify the system files of the VM *host1*, those modifications will not modify directly the raw system image *debian.img* (provided in *qemunet.cfg*), but it will store it the file *session/host1.qcow2*. By removing this file, you will restart the next session with the initial raw system image.  
+For instance, if you modify the system files of the VM *host1*, those modifications will not modify directly the raw system image *debian.img* (provided in *qemunet.cfg*), but it will store it the file *session/host1.qcow2*.
 
-In addition, we use a startup script to load a user-defined script "/mnt/host/start.sh", that is stored in the external session directory. It is a flexible way to setup each VM without modifying the raw system image or using the qcow2 files (that depends on the raw image).
+In addition, we use a startup script to load a user-defined script "/mnt/host/start.sh", that is stored in the file *session/<hostname>/start.sh*. It is a flexible way to setup each VM without modifying the raw system image or using the qcow2 files (that depends on the raw image). For instance, you can start the LAN demo with all IPs and hostnames well configured:
+
+```
+$ ./qemunet.sh -x -s demo/lan.tgz
+```
+
+### Other Examples ###
+
+Other samples are available in the [demo](https://gitlab.inria.fr/qemunet/core/tree/master/demo) subdirectory, as for instance:
+
+  * [demo/single.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/single.topo) : a basic single "debian" VM
+  * [demo/lan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/lan.topo) : a LAN of 4 "debian" VMs 
+  * [demo/chain.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/chain.topo) : a chain of ...
+  * [demo/dmz.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/dmz.topo) : ...
+  * [demo/gw.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/gw.topo) : ...
+  * [demo/vlan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/vlan.topo) : ...
+  * [demo/trunk.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/trunk.topo) : ... 
+
+### How to upgrade an image used by QemuNet? ###
+
+For instance, if you want to install new packages in the "debian" image, you can do it easily like this:
+
+```
+$ ./qemunet.sh -l debian		# -l option implies -i
+```
+
+Then, in the VM, start network and install whatever you want:
+
+```
+$ dhclient eth0   # Internet access via Slirp interface of QEMU (no ping)
+$ apt-get install package1 package2 ...
+$ ...
+$ rm /etc/resolv.conf
+$ history -c
+```
+
+Be careful, all the modifications will be saved definitely in the raw image of the system, i.e. in the file *images/debian/debian.img*.
 
 ### Manual ###
 
-QemuNet is based on a single bash script *qemunet.sh*. Here are detailed available options:
+QemuNet is based on a single bash script *qemunet.sh*. Here are detailed available options for this command:
 
 ```
 Start/restore a session:
@@ -205,7 +226,7 @@ URL[sysname]="http://.../sysname.tgz"              # optional, url to download a
 
 The SYS and FS arrays are required for each system. They respectively define the system type (linux, windows, ...) and the QEMU disk image file (in raw format). QEMUOPT can be used to pass additional options to QEMU when launching the VM, as for instance cpu type or max memory. See QEMU documentation for detailed options. Both KERNEL and INITRD are optional for linux system, but required if you want to launch the VMs in xterm (option -x).
 
-### How to use my own image in QemuNet ###
+### How to use my own image in QemuNet? ###
 
 Instead of using the default GIT repository for *images*, you should prefer to install your own images in the *images* subdirectory (or elsewhere). In this case, you will need to update the configuration file provided in *core/qemunet.cfg*. Please visit this [wiki](http://aurelien.esnard.emi.u-bordeaux.fr/teaching/doku.php?id=qemunet:index) for further details.
 
