@@ -50,33 +50,6 @@ $ ./qemunet.sh -t images/debian/lan4.topo
 
 Then, you can start to play.
 
-### Quick Examples
-
-Launch a single Linux TinyCore VM:
-
-```
-$ ./qemunet.sh -i -t ../images/tinycore/one.topo 
-```
-
-Launch a LAN a 4 VMs based on Debian Unstable "minbase":
-```
-$ ./qemunet.sh -t ../images/debian/lan4.topo
-```
-
-### Demo ###
-
-More examples with complex topology are available in the demo subdirectory.
-
-Fo instance, for the "chain" topology. 
-```
-$ ./qemunet.sh -x -s demo/chain0.tgz
-$ ./qemunet.sh -x -s demo/chain.tgz
-```
-
-In the "chain" configuration, the network is well configured in
-/mnt/host/start.sh scripts, while in the "chain0" configuration, you
-have to do it by yourself.
-
 ### Let's start with a basic LAN ###
 
 You will find several examples in the *demo* subdirectory. But, let's start with a basic LAN topology.
@@ -142,13 +115,13 @@ $ ./qemunet.sh -x -s demo/lan.tgz
 
 Other samples are available in the [demo](https://gitlab.inria.fr/qemunet/core/tree/master/demo) subdirectory, as for instance:
 
-  * [demo/single.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/single.topo) : a basic single "debian" VM
-  * [demo/lan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/lan.topo) : a LAN of 4 "debian" VMs 
-  * [demo/chain.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/chain.topo) : a chain of ...
-  * [demo/dmz.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/dmz.topo) : ...
-  * [demo/gw.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/gw.topo) : ...
-  * [demo/vlan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/vlan.topo) : ...
-  * [demo/trunk.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/trunk.topo) : ... 
+  * [demo/single.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/single.topo) : a basic single "debian" VM (no network)
+  * [demo/lan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/lan.topo) : a LAN of 4 "debian" VMs interconnected by a switch 
+  * [demo/chain.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/chain.topo) : a chain of 5 "debian" VMs interconnected by 4 switches
+  * [demo/gw.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/gw.topo) : an example of LAN with a gateway connected to an external LAN
+  * [demo/dmz.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/dmz.topo) : a more complex topology with two internal LANs (including a DMZ) 
+  * [demo/vlan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/vlan.topo) : a basic LAN divided in two VLANs
+  * [demo/trunk.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/trunk.topo) : two VLANs with trunking
 
 ### How to upgrade an image used by QemuNet? ###
 
