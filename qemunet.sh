@@ -27,7 +27,8 @@ QEMUIMG="qemu-img"
 VDESWITCH="vde_switch"
 SOCAT="socat"
 WGET="wget"
-# TERMCMD=""
+# TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" }
+TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" }
 
 ### QEMUNET CONFIG ###
 
@@ -226,6 +227,7 @@ CHECKRC() {
 
     # check KVM (test working only on Linux system)
     if [ "$NOKVM" -eq 0 ] ; then
+	# Other solution: lscpu | grep Virtualization
         INTELCPUFLAGS=$(grep -c "vmx" /proc/cpuinfo)
         AMDCPUFLAGS=$(grep -c "svm" /proc/cpuinfo)
         INTELKVMMOD=$(lsmod | grep -c "kvm_intel")
@@ -366,27 +368,6 @@ LOADCONF() {
 
 }
 
-### TERM COMMAND ###
-
-BUILD_TERMCMD () {
-
-    ################## rxvt ##################
-    # title of the window
-    # local TERMCMD="rxvt -bg Black -fg White -title $1"
-    # execution switch of the terminal
-    # TERMCMD="$TERMCMD -e"
-
-    ################## xterm #################
-    ## title of the window
-    local TERMCMD="xterm -fg white -bg black -T $1"
-    # local TERMCMD="xterm -hold -T $1"
-    ## execution switch of the terminal
-    TERMCMD="$TERMCMD -e"
-
-    # return
-    echo $TERMCMD
-}
-
 ### QCOW FILE SYSTEM ###
 
 CREATEQCOW() {
@@ -428,7 +409,7 @@ SWITCH() {
     fi
     # launch VDE switch management console in xterm terminal
     if [ "$SWITCHXTERM" -eq 1 ] ; then
-        CMD=$(BUILD_TERMCMD $SWITCHNAME)
+        CMD=$(TERMCMD $SWITCHNAME)
         CMD="${CMD} vdeterm $SWITCHMGMT"
         echo "[$SWITCHNAME] $CMD"
         $CMD &
@@ -578,15 +559,15 @@ HOST() {
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\" -nographic"
         export CMD
-        TERMCMD=$(BUILD_TERMCMD $HOSTNAME)
-        echo "[$HOSTNAME] $TERMCMD $CMD"
-        $TERMCMD bash -c 'eval $CMD' &
+        XCMD=$(TERMCMD $HOSTNAME)
+        echo "[$HOSTNAME] $XCMD $CMD"
+        $XCMD bash -c 'eval $CMD' &
     else
         echo "[$HOSTNAME] $CMD"
         $CMD &
         # CMD="$CMD -nographic"
         # export CMD
-        # $TERMCMD bash -c 'eval $CMD' &
+        # $XCMD bash -c 'eval $CMD' &
     fi
 
     PID=$!
