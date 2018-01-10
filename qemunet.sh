@@ -434,8 +434,6 @@ HUB() {
 
 HOSTNUM=0
 
-
-
 # NETWORK netdev switch0[:vlan0] switch1[:vlan1] ...
 
 NETWORK() {
@@ -478,8 +476,6 @@ NETWORK() {
     done
     CMD="$CMD $NETOPT"
 }
-
-
 
 ### VIRTUAL HOST ###
 
