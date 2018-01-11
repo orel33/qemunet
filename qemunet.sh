@@ -27,9 +27,19 @@ QEMUIMG="qemu-img"
 VDESWITCH="vde_switch"
 SOCAT="socat"
 WGET="wget"
-# TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # a trailing semicolon is required!
-TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" ; }
+# TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # $1:title, $2:cmd $...: args
+# TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" ; }
 
+# TMUX
+tmux start-server
+tmux new-session -d -s qemunet bash
+# tmux set-window-option -t qemunet remain-on-exit on
+tmux set-option -t qemunet default-shell /bin/bash 
+tmux set-option -t qemunet mouse on 
+TERMCMD () { echo "tmux new-window -t qemunet -n $1" ; }
+# tmux kill-session qemunet
+# tmux kill-server
+#TMUXPIDS=$(tmux list-panes -s -t qemunet  -F "#{pane_pid}")
 ### QEMUNET CONFIG ###
 
 QEMUNET="$0"
@@ -589,7 +599,8 @@ HOST() {
         export CMD
         XCMD=$(TERMCMD $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
-        $XCMD bash -c 'eval $CMD' &
+        # $XCMD bash -c 'eval $CMD' &
+	$XCMD bash
     else
         echo "[$HOSTNAME] $CMD"
         $CMD &
@@ -599,7 +610,8 @@ HOST() {
     fi
 
     PID=$!
-
+    echo "PID=$PID"
+    
     # next
     HOSTPIDS="$HOSTPIDS $PID"
     HOSTNUM=$(expr $HOSTNUM + 1)
@@ -634,7 +646,9 @@ TRUNK(){
 ### WAIT ###
 
 WAIT() {
-    wait $HOSTPIDS  # only wait hosts (not switch, etc)
+    # TMUXPIDS=$(tmux list-panes -s -t qemunet  -F "#{pane_pid}")
+    # echo "TMUX PIDS: $TMUXPIDS"
+    wait $HOSTPIDS # only wait hosts (not switch, etc)
 }
 
 ### EXIT ###
@@ -683,7 +697,7 @@ START() {
     if [ "$MODE" = "STANDALONE" ] ; then
         echo "********** Starting Standalone Session **********"
         HOST $THESYSNAME $THEHOSTNAME
-        # echo "=> Don't forget to launch the DHCP client in QEMU if you want to connect Internet using the Slirp interface."
+        # echo "=> Don't forget to launch the DHCP client in QEMU if you want to connect Internet using the Slirp interface."	
     else
         echo "********** Starting Session with Given Topology **********"
         source $TOPOLOGY
