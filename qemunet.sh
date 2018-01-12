@@ -72,7 +72,7 @@ tmux start-server
 tmux new-session -d -s $SESSIONID -n console bash # tmux console
 tmux set-option -t $SESSIONID default-shell /bin/bash 
 tmux set-option -t $SESSIONID mouse on 
-tmux bind-key -n C-c kill-session  # press "C-b C-c" to kill session !
+tmux bind-key C-c kill-session  # press "C-b C-c" to kill session!
 
 ### LOGO ###
 
@@ -614,12 +614,9 @@ HOST() {
         export CMD
 	echo $CMD > $CMDFILE && chmod +x $CMDFILE
         XCMD=$(TERMCMD $HOSTNAME)
-        echo "[$HOSTNAME] $CMD"	# $XCMD 
-        # $XCMD bash -c 'eval $CMD' &  # not possible for TMUX, variable CMD not available for tlux children of daemon...
-        # $XCMD bash $CMDFILE
+        echo "[$HOSTNAME] $CMD"
 	$XCMD $CMDFILE
 	# xterm -e $CMDFILE &
-	# xterm -e bash -c 'eval $CMD' &
 	# tmux select-layout -t $SESSIONID tiled
     else
         echo "[$HOSTNAME] $CMD"
@@ -713,6 +710,7 @@ trap 'EXIT' INT EXIT TERM
 ### START ###
 
 START() {
+    LOGO
     echo "********** Let's Rock **********"
     CHECKRC
     echo "********** Loading VM Config **********"
@@ -734,7 +732,6 @@ START() {
     if [ "$MONITOR" -eq 1 ] ; then
 	echo "=> To acces the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
     fi
-    echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"./qemunet.sh -s mysession.tgz\""    
     # tmux kill-pane -t $SESSIONID:0.0 # remove first pane (console)
