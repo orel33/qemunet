@@ -20,26 +20,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-### QEMUNET RUNTIME COMMAND ###
-
-QEMU="qemu-system-x86_64"
-QEMUIMG="qemu-img"
-VDESWITCH="vde_switch"
-SOCAT="socat"
-WGET="wget"
-# TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # $1:title, $2:cmd $...: args
-# TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" ; }
-
-# TMUX
-tmux start-server
-tmux new-session -d -s qemunet bash
-# tmux set-window-option -t qemunet remain-on-exit on
-tmux set-option -t qemunet default-shell /bin/bash 
-tmux set-option -t qemunet mouse on 
-TERMCMD () { echo "tmux new-window -t qemunet -n $1" ; }
-# tmux kill-session qemunet
-# tmux kill-server
-#TMUXPIDS=$(tmux list-panes -s -t qemunet  -F "#{pane_pid}")
 ### QEMUNET CONFIG ###
 
 QEMUNET="$0"
@@ -51,7 +31,6 @@ QEMUNETCFG="$QEMUNETDIR/qemunet.cfg"
 SESSIONID=$(mktemp -u -d qemunet-$USER-XXXXXX)
 SESSIONDIR=""
 SESSION="session"
-# SESSION="$HOME/qemunet-session"
 TOPOLOGY=""
 IMGARCHIVE=""
 SESSIONARCHIVE=""
@@ -73,6 +52,25 @@ SWITCHXTERM=0
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
+
+### QEMUNET RUNTIME COMMAND ###
+
+QEMU="qemu-system-x86_64"
+QEMUIMG="qemu-img"
+VDESWITCH="vde_switch"
+SOCAT="socat"
+WGET="wget"
+
+# TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # $1:title, $2:cmd $...: args
+# TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" ; }
+TERMCMD () { echo "tmux new-window -t $SESSIONID -n $1" ; } # windows
+# TERMCMD () { echo "tmux split-window -t $SESSIONID" ; }   # panes
+
+# TMUX
+tmux start-server
+tmux new-session -d -s $SESSIONID -n console bash # first pane :0.0, used as tmux console
+tmux set-option -t $SESSIONID default-shell /bin/bash 
+tmux set-option -t $SESSIONID mouse on 
 
 ### USAGE ###
 
@@ -587,6 +585,9 @@ HOST() {
     # slirp network
     if [ "$INTERNET" -eq 1 ] ; then CMD="$CMD -netdev user,id=mynet0 -device $NETDEV,netdev=mynet0" ; fi
 
+
+    CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
+    
     # xterm (linux only)
     if [ "$HOSTSYS" = "linux" -a "$XTERM" -eq 1 ] ; then
         if ! [ -r "$HOSTKERNEL" -a  -r "$HOSTINITRD" ] ; then
@@ -597,12 +598,19 @@ HOST() {
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\" -nographic"
         export CMD
+	echo $CMD > $CMDFILE	
         XCMD=$(TERMCMD $HOSTNAME)
-        echo "[$HOSTNAME] $XCMD $CMD"
+        echo "[$HOSTNAME] $XCMD $CMD"	
         # $XCMD bash -c 'eval $CMD' &
-	$XCMD bash
+        # $XCMD bash $CMDFILE
+	# chmod +x $CMDFILE
+	# $XCMD $CMDFILE
+	# xterm -e $CMDFILE &
+	xterm -e bash -c 'eval $CMD' &
+	# tmux select-layout -t $SESSIONID tiled
     else
         echo "[$HOSTNAME] $CMD"
+	echo $CMD > $CMDFILE	
         $CMD &
         # CMD="$CMD -nographic"
         # export CMD
@@ -646,9 +654,10 @@ TRUNK(){
 ### WAIT ###
 
 WAIT() {
-    # TMUXPIDS=$(tmux list-panes -s -t qemunet  -F "#{pane_pid}")
-    # echo "TMUX PIDS: $TMUXPIDS"
+    TMUXPIDS=$(tmux list-panes -s -t $SESSIONID  -F "#{pane_pid}") # wait cannot be used for TMUX processes are not children!
     wait $HOSTPIDS # only wait hosts (not switch, etc)
+    tmux attach-session -t $SESSIONID
+    # while  $(tmux has-session -t $SESSIONID 2> /dev/null )  ; do sleep 1 ; done
 }
 
 ### EXIT ###
@@ -669,8 +678,9 @@ EXIT() {
         # clean session files
         if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
         rm -f $SESSION/*.pid $SESSION/*.mgmt $SESSION/*.log
-        rm -f $LOCK
-        exit
+        rm -f $LOCK	
+	tmux kill-session -t $SESSIONID	
+	exit
     fi
 }
 
@@ -709,6 +719,8 @@ START() {
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"./qemunet.sh -s mysession.tgz\""    
+    # tmux kill-pane -t $SESSIONID:0.0 # remove first pane (console)
+    # tmux select-layout -t $SESSIONID tiled
     WAIT
     END
     # trap call EXIT at regular exit!
