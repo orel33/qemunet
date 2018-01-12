@@ -74,10 +74,17 @@ tmux set-option -t $SESSIONID default-shell /bin/bash
 tmux set-option -t $SESSIONID mouse on 
 tmux bind-key -n C-c kill-session  # press "C-b C-c" to kill session !
 
+### LOGO ###
+
+LOGO() {
+    cat logo.txt
+}
+
 ### USAGE ###
 
 USAGE() {
-    echo "QemuNet: A light shell script based on QEMU Virtual Machine (VM) and VDE Virtual Switch to enable easy Virtual Networking."
+    LOGO
+    echo "A light shell script based on QEMU Virtual Machine (VM) and VDE Virtual Switch to enable easy Virtual Networking."
     echo
     echo "Start/restore a session:"
     echo "  $(basename $0) -t topology [-a images.tgz] [...]"
