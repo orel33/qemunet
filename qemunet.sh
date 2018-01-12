@@ -54,6 +54,7 @@ MODE=""  # "SESSION" or "STANDALONE"
 # default options
 INTERNET=0
 NOKVM=0
+MONITOR=0
 RAW=0
 MOUNT=1
 XTERM=0
@@ -88,6 +89,7 @@ USAGE() {
     echo "    -q: ignore and remove qcow2 images for the running session"
     echo "    -M: disable mount"
     echo "    -v: enable VLAN support"
+    echo "    -d: enable QEMU monitor (for debug purpose)"    
     echo "    -k: enable KVM full virtualization support (default)"
     echo "    -K: disable KVM full virtualization support (not recommanded)"
     echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
@@ -96,7 +98,7 @@ USAGE() {
 
 ### PARSE ARGUMENTS ###
 
-while getopts "t:a:s:S:c:l:imMkKxyqvh" OPT; do
+while getopts "t:a:s:S:c:l:imMkKxyqvdh" OPT; do
     case $OPT in
         t)
             if [ -n "$MODE" ] ; then USAGE ; fi
@@ -152,6 +154,9 @@ while getopts "t:a:s:S:c:l:imMkKxyqvh" OPT; do
             ;;
         v)
             USEVLAN=1
+            ;;
+        d)
+            MONITOR=1
             ;;
         q)
             RMQCOW2=1
@@ -555,7 +560,9 @@ HOST() {
     fi
 
     #create socket for qemu monitor for host with path $SESSIONDIR/$HOSTNAME.monitor
-    CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"
+    if [ "$MONITOR" -eq 1 ] ; then
+	CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"   # bug: with this option, ctrl-c (SIGINT) will kill qemu session!?!
+    fi
     
     # share directory /mnt/host (linux only)
     if [ "$HOSTSYS" = "linux" -a "$MOUNT" -eq 1 ] ; then
