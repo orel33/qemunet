@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#### QEMUNET Release 1.0 (2016-09-13) ####
+#### QEMUNET Release 1.0 (2018-01) ####
 
 # QemuNet: A light shell script based on QEMU Virtual Machine and
 # VDE Virtual Switch to enable easy Virtual Networking.
@@ -69,9 +69,10 @@ TERMCMD () { echo "tmux new-window -t $SESSIONID -n $1" ; } # windows
 
 # TMUX
 tmux start-server
-tmux new-session -d -s $SESSIONID -n console bash # first pane :0.0, used as tmux console
+tmux new-session -d -s $SESSIONID -n console bash # tmux console
 tmux set-option -t $SESSIONID default-shell /bin/bash 
 tmux set-option -t $SESSIONID mouse on 
+tmux bind-key -n C-c kill-session  # press "C-b C-c" to kill session !
 
 ### USAGE ###
 
@@ -592,7 +593,6 @@ HOST() {
     # slirp network
     if [ "$INTERNET" -eq 1 ] ; then CMD="$CMD -netdev user,id=mynet0 -device $NETDEV,netdev=mynet0" ; fi
 
-
     CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
     
     # xterm (linux only)
@@ -624,7 +624,6 @@ HOST() {
     fi
 
     PID=$!
-    echo "PID=$PID"
     
     # next
     HOSTPIDS="$HOSTPIDS $PID"
@@ -662,6 +661,10 @@ TRUNK(){
 WAIT() {
     TMUXPIDS=$(tmux list-panes -s -t $SESSIONID  -F "#{pane_pid}") # wait cannot be used for TMUX processes are not children!
     wait $HOSTPIDS # only wait hosts (not switch, etc)
+    TTY=$(tmux list-panes -t $SESSIONID:0.0 -F "#{pane_tty}")
+    echo "Welcome in QemuNet! Press \"C-b C-c\" to kill the TMUX session." > $TTY
+     #tmux send-keys -t $SESSIONID:0.0 'echo Welcome in QemuNet!' Enter
+    # tmux send-keys -t $SESSIONID:0.0 'echo Kill tmux session: tmux kill-session -t $SESSIONID' Enter
     tmux attach-session -t $SESSIONID
     # while  $(tmux has-session -t $SESSIONID 2> /dev/null )  ; do sleep 1 ; done
 }
