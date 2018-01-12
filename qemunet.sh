@@ -65,10 +65,17 @@ SWITCHXTERM=0
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
 
+### LOGO ###
+
+LOGO() {
+    cat logo.txt
+}
+
 ### USAGE ###
 
 USAGE() {
-    echo "QemuNet: A light shell script based on QEMU Virtual Machine (VM) and VDE Virtual Switch to enable easy Virtual Networking."
+    LOGO
+    echo "A light shell script based on QEMU Virtual Machine (VM) and VDE Virtual Switch to enable easy Virtual Networking."
     echo
     echo "Start/restore a session:"
     echo "  $(basename $0) -t topology [-a images.tgz] [...]"
