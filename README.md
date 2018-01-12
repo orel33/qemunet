@@ -176,6 +176,7 @@ Advanced Options:
     -q: ignore and remove qcow2 images for the running session
     -M: disable mount
     -v: enable VLAN support
+    -d: enable QEMU monitor (for debug purpose)
     -k: enable KVM full virtualization support (default)
     -K: disable KVM full virtualization support (not recommanded)
     -l <sysname>: launch a VM in standalone mode to update its raw disk image
