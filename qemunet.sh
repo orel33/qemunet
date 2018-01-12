@@ -598,19 +598,18 @@ HOST() {
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\" -nographic"
         export CMD
-	echo $CMD > $CMDFILE	
+	echo $CMD > $CMDFILE && chmod +x $CMDFILE
         XCMD=$(TERMCMD $HOSTNAME)
-        echo "[$HOSTNAME] $XCMD $CMD"	
-        # $XCMD bash -c 'eval $CMD' &
+        echo "[$HOSTNAME] $CMD"	# $XCMD 
+        # $XCMD bash -c 'eval $CMD' &  # not possible for TMUX, variable CMD not available for tlux children of daemon...
         # $XCMD bash $CMDFILE
-	# chmod +x $CMDFILE
-	# $XCMD $CMDFILE
+	$XCMD $CMDFILE
 	# xterm -e $CMDFILE &
-	xterm -e bash -c 'eval $CMD' &
+	# xterm -e bash -c 'eval $CMD' &
 	# tmux select-layout -t $SESSIONID tiled
     else
         echo "[$HOSTNAME] $CMD"
-	echo $CMD > $CMDFILE	
+	echo $CMD > $CMDFILE && chmod +x $CMDFILE
         $CMD &
         # CMD="$CMD -nographic"
         # export CMD
