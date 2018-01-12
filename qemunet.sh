@@ -698,7 +698,9 @@ START() {
     echo "********** Waiting end of Session **********"
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSION"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
-    echo "=> To acces the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
+    if [ "$MONITOR" -eq 1 ] ; then
+	echo "=> To acces the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
+    fi
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"./qemunet.sh -s mysession.tgz\""    
