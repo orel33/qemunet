@@ -33,15 +33,14 @@ TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # a trailing semic
 ### QEMUNET CONFIG ###
 
 QEMUNET="$0"
-QEMUNETDIR="$(dirname $QEMUNET)"
+QEMUNETDIR="$(realpath $(dirname $QEMUNET))"
 QEMUNETCFG="$QEMUNETDIR/qemunet.cfg"
 
 ### PARAMETERS ###
 
 SESSIONID=$(mktemp -u -d qemunet-$USER-XXXXXX)
 SESSIONDIR=""
-# SESSION="session"
-# SESSION="$HOME/qemunet-session"
+SESSIONLINK="session" # session link to session directory
 TOPOLOGY=""
 IMGARCHIVE=""
 SESSIONARCHIVE=""
@@ -185,7 +184,7 @@ if [ -z "$MODE" ] ; then USAGE ; fi
 
 CHECKRC() {
 
-    echo "QEMUNET: $QEMUNET"
+    echo "QEMUNETDIR: $QEMUNETDIR"
     echo "QEMU: $QEMU"
     echo "VDE_SWITCH: $VDESWITCH"
     echo "SOCAT: $SOCAT"
@@ -275,14 +274,16 @@ INITSESSION() {
     ### init session directory
 
     if [ -z "$SESSIONDIR" ] ; then SESSIONDIR="/tmp/$SESSIONID" ; mkdir -p $SESSIONDIR ; fi
+    if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory \"$SESSIONDIR\" does not exist!" ; exit ; fi
+    if ! [ -w "$SESSIONDIR" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONDIR\"!" ; exit ; fi
+
     # SESSIONLINKDIR=$(dirname $SESSIONDIR)
     # if ! [ -w "$SESSIONLINKDIR" ] ; then echo "ERROR: Write access is not granted in directory \"$SESSIONLINKDIR\" for session link!" ; exit ; fi
-    # ln -T -sf $SESSIONDIR $SESSION  # -T means no target directory
-    if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory \"$SESSIONDIR\" does not exist!" ; exit ; fi
-    # if ! [ -d "$SESSION" ] ; then echo "ERROR: Session directory link \"$SESSION\" does not exist!" ; exit ; fi
-    if ! [ -w "$SESSIONDIR" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONDIR\"!" ; exit ; fi
-    # if ! [ -w "$SESSION" ] ; then echo "ERROR: Write access is not granted in \"$SESSION\"!" ; exit ; fi
-
+    # ln -T -sf $SESSIONDIR $SESSIONLINK  # -T means no target directory
+    # if ! [ -d "$SESSIONLINK" ] ; then echo "ERROR: Session directory link \"$SESSIONLINK\" does not exist!" ; exit ; fi
+    # if ! [ -w "$SESSIONLINK" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONLINK\"!" ; exit ; fi
+    ln -T -sf $SESSIONDIR $SESSIONLINK &> /dev/null || echo "WARNING: unable to create session link \"$SESSIONLINK\" in working directory!"
+    
     if [ "$MODE" = "SESSION" ] ; then
 
         ### check session input param
@@ -305,7 +306,7 @@ INITSESSION() {
     fi
 
     # lock session
-    LOCK="$SESSION/lock"
+    LOCK="$SESSIONDIR/lock"
     if [ -e "$LOCK" ] ; then echo "ERROR: Session Locked! Try to remove $LOCK file before restarting." ; exit;
     else touch $LOCK ; fi
 
@@ -313,7 +314,7 @@ INITSESSION() {
 
     echo "MODE: $MODE"
     echo "SESSION DIRECTORY: $SESSIONDIR"
-    # echo "SESSION LINK: $SESSION"
+    echo "SESSION LINK: $SESSIONLINK"
     echo "QEMUNET CFG: $QEMUNETCFG"
     echo "QEMUNET MODE: $MODE"
     echo "NETWORK TOPOLOGY: $TOPOLOGY"
@@ -433,7 +434,7 @@ TRUNKPIDS=""
 SWITCH() {
     SWITCHNAME=$1
     SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
-    REALSESSION=$(realpath $SESSION) # !!!
+    REALSESSION=$(realpath $SESSIONDIR) # !!!
     SWITCHMGMT="$REALSESSION/$SWITCHNAME.mgmt"
     SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
     PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
@@ -490,7 +491,7 @@ NETWORK() {
         VLAN=$(echo $SWITCHNAME | awk -F ":" '{print $2}')  # get VLAN tag
         if [ "$USEVLAN" -eq 0 -a -n "$VLAN" ] ; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; EXIT ; fi
         if [ "$USEVLAN" -eq 1 -a -n "$VLAN" ] ; then SWITCHNAME=$(echo $SWITCHNAME | awk -F ":" '{print $1}') ; else VLAN=0 ; fi
-        REALSESSION=$(realpath $SESSION) # !!!
+        REALSESSION=$(realpath $SESSIONDIR) # !!!
         SWITCHMGMT="$REALSESSION/$SWITCHNAME.mgmt"
         SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
         SWITCHLOG="$REALSESSION/$SWITCHNAME.log"
@@ -639,7 +640,7 @@ TRUNK(){
 
     # a strange behavior was observed with the following command, thus we need to move to a writable directory before calling dpipe ...
     echo "[$SWITCH1]---[$SWITCH2] dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2"
-    (cd $SESSION; dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2  >& /dev/null &)
+    (cd $SESSIONDIR; dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2  >& /dev/null &)
 
     PID=$!
     TRUNKPIDS="$TRUNKPIDS $PID"
@@ -703,7 +704,7 @@ START() {
         source $TOPOLOGY
     fi
     echo "********** Waiting end of Session **********"
-    echo "=> Your QemuNet session is running in this directory: $SESSIONDIR"
+    echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     if [ "$MONITOR" -eq 1 ] ; then
 	echo "=> To acces the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
