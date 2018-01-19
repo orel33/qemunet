@@ -40,7 +40,7 @@ QEMUNETCFG="$QEMUNETDIR/qemunet.cfg"
 
 SESSIONID=$(mktemp -u -d qemunet-$USER-XXXXXX)
 SESSIONDIR=""
-SESSION="session"
+# SESSION="session"
 # SESSION="$HOME/qemunet-session"
 TOPOLOGY=""
 IMGARCHIVE=""
@@ -275,13 +275,13 @@ INITSESSION() {
     ### init session directory
 
     if [ -z "$SESSIONDIR" ] ; then SESSIONDIR="/tmp/$SESSIONID" ; mkdir -p $SESSIONDIR ; fi
-    SESSIONLINKDIR=$(dirname $SESSION)
-    if ! [ -w "$SESSIONLINKDIR" ] ; then echo "ERROR: Write access is not granted in directory \"$SESSIONLINKDIR\" for session link!" ; exit ; fi
-    ln -T -sf $SESSIONDIR $SESSION  # -T means no target directory
+    # SESSIONLINKDIR=$(dirname $SESSIONDIR)
+    # if ! [ -w "$SESSIONLINKDIR" ] ; then echo "ERROR: Write access is not granted in directory \"$SESSIONLINKDIR\" for session link!" ; exit ; fi
+    # ln -T -sf $SESSIONDIR $SESSION  # -T means no target directory
     if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory \"$SESSIONDIR\" does not exist!" ; exit ; fi
-    if ! [ -d "$SESSION" ] ; then echo "ERROR: Session directory link \"$SESSION\" does not exist!" ; exit ; fi
+    # if ! [ -d "$SESSION" ] ; then echo "ERROR: Session directory link \"$SESSION\" does not exist!" ; exit ; fi
     if ! [ -w "$SESSIONDIR" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONDIR\"!" ; exit ; fi
-    if ! [ -w "$SESSION" ] ; then echo "ERROR: Write access is not granted in \"$SESSION\"!" ; exit ; fi
+    # if ! [ -w "$SESSION" ] ; then echo "ERROR: Write access is not granted in \"$SESSION\"!" ; exit ; fi
 
     if [ "$MODE" = "SESSION" ] ; then
 
@@ -296,7 +296,7 @@ INITSESSION() {
         if [ -r "$SESSIONARCHIVE" ] ; then tar xzf $SESSIONARCHIVE -C $SESSIONDIR ; fi
 
         # set environment
-        TOPOLOGY="$SESSION/topology"
+        TOPOLOGY="$SESSIONDIR/topology"
 
         # check
         if ! [ -r "$TOPOLOGY" ] ; then echo "ERROR: Topology file $TOPOLOGY missing!" ; exit ; fi
@@ -313,7 +313,7 @@ INITSESSION() {
 
     echo "MODE: $MODE"
     echo "SESSION DIRECTORY: $SESSIONDIR"
-    echo "SESSION LINK: $SESSION"
+    # echo "SESSION LINK: $SESSION"
     echo "QEMUNET CFG: $QEMUNETCFG"
     echo "QEMUNET MODE: $MODE"
     echo "NETWORK TOPOLOGY: $TOPOLOGY"
@@ -432,11 +432,11 @@ TRUNKPIDS=""
 
 SWITCH() {
     SWITCHNAME=$1
-    SWITCHDIR="$SESSION/$SWITCHNAME"
+    SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
     REALSESSION=$(realpath $SESSION) # !!!
     SWITCHMGMT="$REALSESSION/$SWITCHNAME.mgmt"
     SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
-    PIDFILE="$SESSION/$SWITCHNAME.pid"
+    PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
     CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"
@@ -461,9 +461,9 @@ SWITCH() {
 
 HUB() {
     SWITCHNAME=$1
-    SWITCHDIR="$SESSION/$SWITCHNAME"
+    SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
     SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
-    PIDFILE="$SESSION/$SWITCHNAME.pid"
+    PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
     CMD="$VDESWITCH -daemon -s $SWITCHDIR -p $PIDFILE -hub"
@@ -492,7 +492,7 @@ NETWORK() {
         if [ "$USEVLAN" -eq 1 -a -n "$VLAN" ] ; then SWITCHNAME=$(echo $SWITCHNAME | awk -F ":" '{print $1}') ; else VLAN=0 ; fi
         REALSESSION=$(realpath $SESSION) # !!!
         SWITCHMGMT="$REALSESSION/$SWITCHNAME.mgmt"
-        SWITCHDIR="$SESSION/$SWITCHNAME"
+        SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
         SWITCHLOG="$REALSESSION/$SWITCHNAME.log"
         ID="$SWITCHNAME"
         # MAC=$(hexdump -n3 -e'/3 "AA:AA:AA" 3/1 ":%02X"' /dev/urandom)
@@ -537,7 +537,7 @@ HOST() {
     HOSTSYS="${SYS[$SYSNAME]}"
     HOSTKERNEL="${KERNEL[$SYSNAME]}"
     HOSTINITRD="${INITRD[$SYSNAME]}"
-    HOSTQCOW="$SESSION/$HOSTNAME.qcow2"
+    HOSTQCOW="$SESSIONDIR/$HOSTNAME.qcow2"
 
     # check SESSIONDIR
     if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory $SESSIONDIR does not exist!" ; EXIT ; fi
@@ -559,7 +559,7 @@ HOST() {
     if [ "$RAW" -eq 1 ] ; then
         CMD="$CMD -hda $HOSTFS"   # use raw image file
     else
-        # ln -sf $HOSTFS $SESSION/$HOSTNAME.img
+        # ln -sf $HOSTFS $SESSIONDIR/$HOSTNAME.img
         # create qcow2 if needed
         CREATEQCOW $HOSTFS $HOSTQCOW
         if ! [ -r "$HOSTQCOW" ] ; then echo "ERROR: Qcow2 image file $HOSTQCOW not found!"; EXIT ; fi
@@ -629,8 +629,8 @@ TRUNK(){
     SWITCH1=$1
     SWITCH2=$2
 
-    if ! [ -f  $SESSION/$SWITCH1.pid ]; then "ERROR: Unknown switch $SWITCH1 !" ; EXIT ; fi
-    if ! [ -f  $SESSION/$SWITCH2.pid ]; then "ERROR: Unknown switch $SWITCH2 !" ; EXIT ; fi
+    if ! [ -f  $SESSIONDIR/$SWITCH1.pid ]; then "ERROR: Unknown switch $SWITCH1 !" ; EXIT ; fi
+    if ! [ -f  $SESSIONDIR/$SWITCH2.pid ]; then "ERROR: Unknown switch $SWITCH2 !" ; EXIT ; fi
 
     echo "=> Trunk link between switch $SWITCH1 and switch $SWITCH2"
 
@@ -668,7 +668,7 @@ EXIT() {
         if [ -n "$TRUNKPIDS" ] ; then kill -9 $TRUNKPIDS 2> /dev/null; wait $! 2> /dev/null ; fi
         # clean session files
         if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
-        rm -f $SESSION/*.pid $SESSION/*.mgmt $SESSION/*.log
+        rm -f $SESSIONDIR/*.pid $SESSIONDIR/*.mgmt $SESSIONDIR/*.log
         rm -f $LOCK
         exit
     fi
@@ -703,12 +703,11 @@ START() {
         source $TOPOLOGY
     fi
     echo "********** Waiting end of Session **********"
-    echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSION"
+    echo "=> Your QemuNet session is running in this directory: $SESSIONDIR"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     if [ "$MONITOR" -eq 1 ] ; then
 	echo "=> To acces the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
     fi
-    echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"./qemunet.sh -s mysession.tgz\""    
     WAIT
