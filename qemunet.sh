@@ -558,7 +558,8 @@ HOST() {
 
     # use raw or qcow2 system image
     if [ "$RAW" -eq 1 ] ; then
-        CMD="$CMD -hda $HOSTFS"   # use raw image file
+        # CMD="$CMD -hda $HOSTFS"   # use raw image file
+	CMD="$CMD -drive format=raw,file=$HOSTFS"
     else
         # ln -sf $HOSTFS $SESSIONDIR/$HOSTNAME.img
         # create qcow2 if needed
