@@ -593,6 +593,8 @@ HOST() {
     # slirp network
     if [ "$INTERNET" -eq 1 ] ; then CMD="$CMD -netdev user,id=mynet0 -device $NETDEV,netdev=mynet0" ; fi
 
+    CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
+    
     # xterm (linux only)
     if [ "$HOSTSYS" = "linux" -a "$XTERM" -eq 1 ] ; then
         if ! [ -r "$HOSTKERNEL" -a  -r "$HOSTINITRD" ] ; then
@@ -603,11 +605,13 @@ HOST() {
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\" -nographic"
         export CMD
+	echo $CMD > $CMDFILE && chmod +x $CMDFILE
         XCMD=$(TERMCMD $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
         $XCMD bash -c 'eval $CMD' &
     else
         echo "[$HOSTNAME] $CMD"
+	echo $CMD > $CMDFILE && chmod +x $CMDFILE
         $CMD &
         # CMD="$CMD -nographic"
         # export CMD
