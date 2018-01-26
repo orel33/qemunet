@@ -1,0 +1,14 @@
+### twolans
+#                                    
+#  opeth - [s1] - immortal - [s2] - grave 
+#
+#
+#                  
+
+# switches 
+
+SWITCH s1
+SWITCH s2   
+HOST debian  opeth s1
+HOST debian  immortal s1 s2 
+HOST debian  grave    s2 
