@@ -9,6 +9,6 @@
 
 SWITCH s1
 SWITCH s2   
-HOST debian10  opeth s1
+HOST alpinex  opeth s1
 HOST debian10  immortal s1 s2 
 HOST debian10  grave    s2
