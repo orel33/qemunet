@@ -32,7 +32,7 @@ QemuNet is a free software distributed under the terms of the GNU General Public
 Let's download it:
 
 ```
-  $ git clone https://gitlab.inria.fr/qemunet/core.git qemunet
+  $ git clone https://gitlab.inria.fr/esnard/qemunet.git qemunet
 ```
 
 The main QemuNet files are described below:
@@ -84,7 +84,7 @@ QEMUOPT[debian]="-localtime -m 512"
 FS[debian]="$IMGDIR/debian/debian.img"
 KERNEL[debian]="$IMGDIR/debian/debian.vmlinuz"
 INITRD[debian]="$IMGDIR/debian/debian.initrd"
-URL[debian]="https://gitlab.inria.fr/qemunet/images/raw/master/debian.tgz"
+URL[debian]="http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/debian.tgz"
 ```
 
 Following, you can launch your Virtual Network (VN). All the current session files are provided in the *session* directory, that is linked to a unique directory in /tmp. 
