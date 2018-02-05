@@ -27,7 +27,7 @@ If the KVM test fails, we recommand you to solve this problem before to use *Qem
 
 ### Download & Install ###
 
-QemuNet is a free software distributed under the terms of the GNU General Public License (GPL) and it is available for download at [Inria GitLab](https://gitlab.inria.fr/qemunet). 
+QemuNet is a free software distributed under the terms of the GNU General Public License (GPL) and it is available for download at [Inria GitLab](https://gitlab.inria.fr/esnard/qemunet). 
 
 Let's download it:
 
@@ -46,7 +46,7 @@ qemunet
   └── README.md     <-- this file
 ```
 
-By default, the *images* directory is empty. The default system images (described in *qemunet.cfg*) will be automatically download by the QemuNet script at first use. The default *QemuNet* images are available on [Inria GitLab](http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/).
+By default, the *images* directory is empty. The default system images (described in *qemunet.cfg*) will be automatically download by the QemuNet script at first use. The default *QemuNet* images are available [here](http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/).
 
 ### Test ###
 
