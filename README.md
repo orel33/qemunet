@@ -46,7 +46,7 @@ qemunet
   └── README.md     <-- this file
 ```
 
-By default, the *images* directory is empty. The default system images (described in *qemunet.cfg*) will be automatically download by the QemuNet script at first use. The default *QemuNet* images are available on [Inria GitLab](https://gitlab.inria.fr/qemunet/images).
+By default, the *images* directory is empty. The default system images (described in *qemunet.cfg*) will be automatically download by the QemuNet script at first use. The default *QemuNet* images are available on [Inria GitLab](http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/).
 
 ### Test ###
 
