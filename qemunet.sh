@@ -596,10 +596,10 @@ HOST() {
     CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
     
     # xterm (linux only)
-    if [ "$HOSTSYS" = "linux" -a "$XTERM" -eq 1 ] ; then
-        if ! [ -r "$HOSTKERNEL" -a  -r "$HOSTINITRD" ] ; then
-            echo "ERROR: Linux kernel or initrd file is missing. Dont use -x option." ; EXIT ;
-        fi
+    if [ "$HOSTSYS" = "linux" -a "$XTERM" -eq 1 -a -r "$HOSTKERNEL" -a -r "$HOSTINITRD" ] ; then
+        # if ! [ -r "$HOSTKERNEL" -a  -r "$HOSTINITRD" ] ; then
+        #    echo "ERROR: Linux kernel or initrd file is missing. Dont use -x option." ; EXIT ;
+        # fi
         # append kernel args
         KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0"
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
