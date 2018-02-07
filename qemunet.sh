@@ -67,7 +67,7 @@ SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
 ### LOGO ###
 
 LOGO() {
-    cat logo.txt
+    cat $QEMUNETDIR/logo.txt
 }
 
 ### USAGE ###
