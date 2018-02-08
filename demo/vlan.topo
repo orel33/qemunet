@@ -9,9 +9,9 @@
 # 
 
 SWITCH s1
-HOST debian  syl      s1:100
-HOST debian  nile     s1:100
-HOST debian  opeth    s1:200
-HOST debian  grave    s1:200
+HOST debian  syl      s1
+HOST debian  nile     s1
+HOST debian  opeth    s1
+HOST debian  grave    s1
 HOST debian  immortal s1
 
