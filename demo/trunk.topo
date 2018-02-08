@@ -12,9 +12,9 @@ SWITCH s1
 SWITCH s2
 TRUNK  s1 s2 
 
-HOST debian  syl      s1:100
-HOST debian  nile     s2:100
-HOST debian  opeth    s1:200
-HOST debian  grave    s2:200
-HOST debian  immortal s1
+HOST debian10  syl      s1
+HOST debian10  nile     s2
+HOST debian10  opeth    s1
+HOST debian10  grave    s2
+HOST debian10  immortal s1
 
