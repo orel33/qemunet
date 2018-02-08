@@ -210,7 +210,8 @@ The SYS and FS arrays are required for each system. They respectively define the
 
 ### How to use my own image in QemuNet? ###
 
-Instead of using the default GIT repository for *images*, you should prefer to install your own images in the *images* subdirectory (or elsewhere). In this case, you will need to update the configuration file provided in *qemunet.cfg*. Please visit this [wiki](http://aurelien.esnard.emi.u-bordeaux.fr/teaching/doku.php?id=qemunet:index) for further details.
+Instead of using the default repository for QemuNet *images* (available [here](http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/)), you should prefer to install your own images in the *images* subdirectory (or elsewhere). In this case, you will need to update the configuration file provided in *qemunet.cfg*. 
+Please visit this [wiki](http://aurelien.esnard.emi.u-bordeaux.fr/teaching/doku.php?id=qemunet:index) for further details.
 
 ### VLAN support in QemuNet ###
 
