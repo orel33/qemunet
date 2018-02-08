@@ -218,13 +218,12 @@ You can start to have a look in the "vlan" and "trunk" samples provided in demo/
 
 ```
 $ ./qemunet.sh -v -x -y -s demo/vlan.tgz
-$ ./qemunet.sh -v -x -y -s demo/trunk.tgz  
+$ ./qemunet.sh -v -x -y -s demo/trunk.tgz  # see TRUNK keyword in topology file
 ```
 
-*More details incoming...*
-
-
-
+The "-v" option is required to enable VLAN support in QemuNet. The "-y" option starts the VDE switch management console. 
+See documentation at http://wiki.virtualsquare.org/wiki/index.php/VLAN_trunking to know how to configure VLAN on VDE switch.
+It is also possible to provide a file <switchname.cmd> in the session directory that will be load by the VDE switch at boot time.
 
 ### Documentation ###
 
