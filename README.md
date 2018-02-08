@@ -214,10 +214,12 @@ Instead of using the default GIT repository for *images*, you should prefer to i
 
 ### VLAN support in QemuNet ###
 
-You can start to have a look in the "vlan" and "trunk" demo:
+You can start to have a look in the "vlan" and "trunk" samples provided in demo/ :
 
-  $ ./qemunet.sh -v -x -y -s demo/vlan.tgz
-  $ ./qemunet.sh -v -x -y -s demo/trunk.tgz  
+```
+$ ./qemunet.sh -v -x -y -s demo/vlan.tgz
+$ ./qemunet.sh -v -x -y -s demo/trunk.tgz  
+```
 
 *More details incoming...*
 
