@@ -212,6 +212,18 @@ The SYS and FS arrays are required for each system. They respectively define the
 
 Instead of using the default GIT repository for *images*, you should prefer to install your own images in the *images* subdirectory (or elsewhere). In this case, you will need to update the configuration file provided in *qemunet.cfg*. Please visit this [wiki](http://aurelien.esnard.emi.u-bordeaux.fr/teaching/doku.php?id=qemunet:index) for further details.
 
+### VLAN support in QemuNet ###
+
+You can start to have a look in the "vlan" and "trunk" demo:
+
+  $ ./qemunet.sh -v -x -y -s demo/vlan.tgz
+  $ ./qemunet.sh -v -x -y -s demo/trunk.tgz  
+
+*More details incoming...*
+
+
+
+
 ### Documentation ###
 
   * QEMU: http://wiki.qemu.org
