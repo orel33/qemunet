@@ -499,25 +499,26 @@ NETWORK() {
         ID="$SWITCHNAME"
         # MAC=$(hexdump -n3 -e'/3 "AA:AA:AA" 3/1 ":%02X"' /dev/urandom)
         MAC=$(printf "AA:AA:AA:AA:%02x:%02x" $HOSTNUM $IFACENUM)
-        echo "MAC= $MAC"
+        # echo "MAC= $MAC"
         PORTNUM=${SWPORTNUM[$SWITCHNAME]}
         NETOPT="$NETOPT -netdev vde,sock=$SWITCHDIR,port=$PORTNUM,id=$ID -device $NETDEV,netdev=$ID,mac=$MAC"
-        # VLAN management (http://wiki.virtualsquare.org/wiki/index.php/VDE)
+        # echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM (vlan $VLAN)"
+	echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM"	
+	# VLAN management (http://wiki.virtualsquare.org/wiki/index.php/VDE)
         if [ "$USEVLAN" -eq 1 ] ; then
             echo "port/setnumports $SWMAXNUMPORTS" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null   # set max num ports (TODO: only the first time)
             echo "port/create $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null              # create switch port
             # echo "vlan/create $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null               # create new VLAN (TODO: create only the first time)
             # echo "port/setvlan $PORTNUM $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null     # set port to vlan (as untagged)
             ## echo "vlan/addport $VLAN $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null    # set port to vlan (as tagged)
-	    if [ -r $SWITCHCMD ] ; then
+	    if [ -r $SWITCHCMD ] ; then		
 		echo "load $SWITCHCMD" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null               # load switch configuration
+		echo "=> load switch configuration \"$SWITCHCMD\""
 	    fi
         fi
         # print switch log for debug
         echo "vlan/allprint" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &>> $SWITCHLOG                     # print log
         echo "port/allprint" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &>> $SWITCHLOG                     # print log
-        # echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM (vlan $VLAN)"
-	echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM"	
 
         IFACENUM=$(expr $IFACENUM + 1)
         SWPORTNUM[$SWITCHNAME]=$(expr $PORTNUM + 1)
@@ -716,7 +717,7 @@ START() {
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     if [ "$MONITOR" -eq 1 ] ; then
-	echo "=> To acces the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
+	echo "=> To access the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
     fi
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"./qemunet.sh -s mysession.tgz\""    
