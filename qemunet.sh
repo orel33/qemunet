@@ -434,8 +434,8 @@ TRUNKPIDS=""
 SWITCH() {
     SWITCHNAME=$1
     SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
-    REALSESSION=$(realpath $SESSIONDIR) # !!!
-    SWITCHMGMT="$REALSESSION/$SWITCHNAME.mgmt"
+    # REALSESSION=$(realpath $SESSIONDIR) # !!!
+    SWITCHMGMT="$SESSIONDIR/$SWITCHNAME.mgmt"
     SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
     PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
@@ -488,13 +488,14 @@ NETWORK() {
     IFACENUM=0
     for SWITCHNAME in $SWITCHNAMES ; do
         # test if VLAN is used?
-        VLAN=$(echo $SWITCHNAME | awk -F ":" '{print $2}')  # get VLAN tag
-        if [ "$USEVLAN" -eq 0 -a -n "$VLAN" ] ; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; EXIT ; fi
-        if [ "$USEVLAN" -eq 1 -a -n "$VLAN" ] ; then SWITCHNAME=$(echo $SWITCHNAME | awk -F ":" '{print $1}') ; else VLAN=0 ; fi
-        REALSESSION=$(realpath $SESSIONDIR) # !!!
-        SWITCHMGMT="$REALSESSION/$SWITCHNAME.mgmt"
+        # VLAN=$(echo $SWITCHNAME | awk -F ":" '{print $2}')  # get VLAN tag
+        # if [ "$USEVLAN" -eq 0 -a -n "$VLAN" ] ; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; EXIT ; fi
+        # if [ "$USEVLAN" -eq 1 -a -n "$VLAN" ] ; then SWITCHNAME=$(echo $SWITCHNAME | awk -F ":" '{print $1}') ; else VLAN=0 ; fi
+        # REALSESSION=$(realpath $SESSIONDIR) # !!!
+        SWITCHMGMT="$SESSIONDIR/$SWITCHNAME.mgmt"
         SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
-        SWITCHLOG="$REALSESSION/$SWITCHNAME.log"
+        SWITCHLOG="$SESSIONDIR/$SWITCHNAME.log"
+        SWITCHCMD="$SESSIONDIR/$SWITCHNAME.cmd"	
         ID="$SWITCHNAME"
         # MAC=$(hexdump -n3 -e'/3 "AA:AA:AA" 3/1 ":%02X"' /dev/urandom)
         MAC=$(printf "AA:AA:AA:AA:%02x:%02x" $HOSTNUM $IFACENUM)
@@ -504,16 +505,19 @@ NETWORK() {
         # VLAN management (http://wiki.virtualsquare.org/wiki/index.php/VDE)
         if [ "$USEVLAN" -eq 1 ] ; then
             echo "port/setnumports $SWMAXNUMPORTS" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null   # set max num ports (TODO: only the first time)
-            echo "vlan/create $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null                 # create new VLAN (TODO: create only the first time)
             echo "port/create $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null              # create switch port
-            echo "port/setvlan $PORTNUM $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null       # set port to vlan (as untagged)
-            # echo "vlan/addport $VLAN $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null     # set port to vlan (as tagged)
+            # echo "vlan/create $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null               # create new VLAN (TODO: create only the first time)
+            # echo "port/setvlan $PORTNUM $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null     # set port to vlan (as untagged)
+            ## echo "vlan/addport $VLAN $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null    # set port to vlan (as tagged)
+	    if [ -r $SWITCHCMD ] ; then
+		echo "load $SWITCHCMD" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null               # load switch configuration
+	    fi
         fi
         # print switch log for debug
         echo "vlan/allprint" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &>> $SWITCHLOG                     # print log
         echo "port/allprint" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &>> $SWITCHLOG                     # print log
-        echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM (vlan $VLAN)"
-
+        # echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM (vlan $VLAN)"
+	echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM"	
 
         IFACENUM=$(expr $IFACENUM + 1)
         SWPORTNUM[$SWITCHNAME]=$(expr $PORTNUM + 1)
