@@ -720,7 +720,7 @@ START() {
 	echo "=> To access the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
     fi
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
-    echo "=> Then, to restore it, type: \"./qemunet.sh -s mysession.tgz\""    
+    echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""    
     WAIT
     END
     # trap call EXIT at regular exit!
