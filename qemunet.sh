@@ -81,18 +81,19 @@ TMUX_START() {
     # tmux set-option -g allow-rename off
     tmux set-option -g status-left ''
     tmux set-option -g status-right '#[fg=colour233,bg=colour241,bold] %d/%m/%Y #[fg=colour233,bg=colour245,bold] %H:%M:%S '
-    # tmux bind-key S source-file $QEMUNETDIR/split.tmux
-    # tmux bind-key J source-file $QEMUNETDIR/join.tmux
-    # tmux send-keys 'emacs -nw' C-m   # run commands
+    tmux bind P select-window -t :0 \\\; send-keys "$QEMUNETDIR/tmux-panes.sh" Enter \\\; select-window -t :1   # one single window with multiple panes
+    tmux bind W select-window -t :0 \\\; send-keys "$QEMUNETDIR/tmux-windows.sh" Enter \\\; select-window -t :1 # multiple windows
 }
 
 # join multiple tmux windows in tiled panes
 TMUX_JOIN() {
     # WINS=$(tmux list-windows -t $SESSIONID -F "#{window_index}")
-    NBWINS=$(tmux list-windows -t $SESSIONID -F "#{window_index}" | wc -l)
+    # NBWINS=$(tmux list-windows -t $SESSIONID -F "#{window_index}" | wc -l)
+    NBWINS=$(tmux list-windows -F "#{window_index}" | wc -l)
     NBWINS=$(expr $NBWINS - 1)
-    for WIN in $(seq 2 $NBWINS) ; do tmux join -t $SESSIONID -s $WIN -t 1 ; done
-    tmux select-layout -t $SESSIONID tiled        
+    # for WIN in $(seq 2 $NBWINS) ; do tmux join -t $SESSIONID -s $WIN -t 1 ; done
+    for WIN in $(seq 2 $NBWINS) ; do tmux join -s $WIN -t 1 ; done
+    tmux select-layout tiled        
 }
 
 # multiple tmux windows in tiled panes
