@@ -1,0 +1,16 @@
+### LAN
+
+#                                    
+#                               opeth grave 
+#                                 \   / 
+#                                  [s1]
+#                                 /    \
+#                                syl immortal
+# 
+
+SWITCH s1
+HOST alpine  immortal s1 
+HOST alpine  opeth    s1       
+HOST alpine  syl      s1
+HOST alpine  grave    s1
+

@@ -23,14 +23,14 @@
 ### QEMUNET CONFIG ###
 
 QEMUNET="$0"
-QEMUNETDIR="$(dirname $QEMUNET)"
+QEMUNETDIR="$(realpath $(dirname $QEMUNET))"
 QEMUNETCFG="$QEMUNETDIR/qemunet.cfg"
 
 ### PARAMETERS ###
 
 SESSIONID=$(mktemp -u -d qemunet-$USER-XXXXXX)
 SESSIONDIR=""
-SESSION="session"
+SESSIONLINK="session" # session link to session directory
 TOPOLOGY=""
 IMGARCHIVE=""
 SESSIONARCHIVE=""
@@ -77,7 +77,7 @@ tmux bind-key C-c kill-session  # press "C-b C-c" to kill session!
 ### LOGO ###
 
 LOGO() {
-    cat logo.txt
+    cat $QEMUNETDIR/logo.txt
 }
 
 ### USAGE ###
@@ -194,7 +194,7 @@ if [ -z "$MODE" ] ; then USAGE ; fi
 
 CHECKRC() {
 
-    echo "QEMUNET: $QEMUNET"
+    echo "QEMUNETDIR: $QEMUNETDIR"
     echo "QEMU: $QEMU"
     echo "VDE_SWITCH: $VDESWITCH"
     echo "SOCAT: $SOCAT"
@@ -284,14 +284,16 @@ INITSESSION() {
     ### init session directory
 
     if [ -z "$SESSIONDIR" ] ; then SESSIONDIR="/tmp/$SESSIONID" ; mkdir -p $SESSIONDIR ; fi
-    SESSIONLINKDIR=$(dirname $SESSION)
-    if ! [ -w "$SESSIONLINKDIR" ] ; then echo "ERROR: Write access is not granted in directory \"$SESSIONLINKDIR\" for session link!" ; exit ; fi
-    ln -T -sf $SESSIONDIR $SESSION  # -T means no target directory
     if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory \"$SESSIONDIR\" does not exist!" ; exit ; fi
-    if ! [ -d "$SESSION" ] ; then echo "ERROR: Session directory link \"$SESSION\" does not exist!" ; exit ; fi
     if ! [ -w "$SESSIONDIR" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONDIR\"!" ; exit ; fi
-    if ! [ -w "$SESSION" ] ; then echo "ERROR: Write access is not granted in \"$SESSION\"!" ; exit ; fi
 
+    # SESSIONLINKDIR=$(dirname $SESSIONDIR)
+    # if ! [ -w "$SESSIONLINKDIR" ] ; then echo "ERROR: Write access is not granted in directory \"$SESSIONLINKDIR\" for session link!" ; exit ; fi
+    # ln -T -sf $SESSIONDIR $SESSIONLINK  # -T means no target directory
+    # if ! [ -d "$SESSIONLINK" ] ; then echo "ERROR: Session directory link \"$SESSIONLINK\" does not exist!" ; exit ; fi
+    # if ! [ -w "$SESSIONLINK" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONLINK\"!" ; exit ; fi
+    ln -T -sf $SESSIONDIR $SESSIONLINK &> /dev/null || echo "WARNING: unable to create session link \"$SESSIONLINK\" in working directory!"
+    
     if [ "$MODE" = "SESSION" ] ; then
 
         ### check session input param
@@ -305,7 +307,7 @@ INITSESSION() {
         if [ -r "$SESSIONARCHIVE" ] ; then tar xzf $SESSIONARCHIVE -C $SESSIONDIR ; fi
 
         # set environment
-        TOPOLOGY="$SESSION/topology"
+        TOPOLOGY="$SESSIONDIR/topology"
 
         # check
         if ! [ -r "$TOPOLOGY" ] ; then echo "ERROR: Topology file $TOPOLOGY missing!" ; exit ; fi
@@ -314,7 +316,7 @@ INITSESSION() {
     fi
 
     # lock session
-    LOCK="$SESSION/lock"
+    LOCK="$SESSIONDIR/lock"
     if [ -e "$LOCK" ] ; then echo "ERROR: Session Locked! Try to remove $LOCK file before restarting." ; exit;
     else touch $LOCK ; fi
 
@@ -322,7 +324,7 @@ INITSESSION() {
 
     echo "MODE: $MODE"
     echo "SESSION DIRECTORY: $SESSIONDIR"
-    echo "SESSION LINK: $SESSION"
+    echo "SESSION LINK: $SESSIONLINK"
     echo "QEMUNET CFG: $QEMUNETCFG"
     echo "QEMUNET MODE: $MODE"
     echo "NETWORK TOPOLOGY: $TOPOLOGY"
@@ -441,11 +443,11 @@ TRUNKPIDS=""
 
 SWITCH() {
     SWITCHNAME=$1
-    SWITCHDIR="$SESSION/$SWITCHNAME"
-    REALSESSION=$(realpath $SESSION) # !!!
-    SWITCHMGMT="$REALSESSION/$SWITCHNAME.mgmt"
+    SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
+    # REALSESSION=$(realpath $SESSIONDIR) # !!!
+    SWITCHMGMT="$SESSIONDIR/$SWITCHNAME.mgmt"
     SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
-    PIDFILE="$SESSION/$SWITCHNAME.pid"
+    PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
     CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"
@@ -470,9 +472,9 @@ SWITCH() {
 
 HUB() {
     SWITCHNAME=$1
-    SWITCHDIR="$SESSION/$SWITCHNAME"
+    SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
     SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
-    PIDFILE="$SESSION/$SWITCHNAME.pid"
+    PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
     CMD="$VDESWITCH -daemon -s $SWITCHDIR -p $PIDFILE -hub"
@@ -496,32 +498,37 @@ NETWORK() {
     IFACENUM=0
     for SWITCHNAME in $SWITCHNAMES ; do
         # test if VLAN is used?
-        VLAN=$(echo $SWITCHNAME | awk -F ":" '{print $2}')  # get VLAN tag
-        if [ "$USEVLAN" -eq 0 -a -n "$VLAN" ] ; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; EXIT ; fi
-        if [ "$USEVLAN" -eq 1 -a -n "$VLAN" ] ; then SWITCHNAME=$(echo $SWITCHNAME | awk -F ":" '{print $1}') ; else VLAN=0 ; fi
-        REALSESSION=$(realpath $SESSION) # !!!
-        SWITCHMGMT="$REALSESSION/$SWITCHNAME.mgmt"
-        SWITCHDIR="$SESSION/$SWITCHNAME"
-        SWITCHLOG="$REALSESSION/$SWITCHNAME.log"
+        # VLAN=$(echo $SWITCHNAME | awk -F ":" '{print $2}')  # get VLAN tag
+        # if [ "$USEVLAN" -eq 0 -a -n "$VLAN" ] ; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; EXIT ; fi
+        # if [ "$USEVLAN" -eq 1 -a -n "$VLAN" ] ; then SWITCHNAME=$(echo $SWITCHNAME | awk -F ":" '{print $1}') ; else VLAN=0 ; fi
+        # REALSESSION=$(realpath $SESSIONDIR) # !!!
+        SWITCHMGMT="$SESSIONDIR/$SWITCHNAME.mgmt"
+        SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
+        SWITCHLOG="$SESSIONDIR/$SWITCHNAME.log"
+        SWITCHCMD="$SESSIONDIR/$SWITCHNAME.cmd"	
         ID="$SWITCHNAME"
         # MAC=$(hexdump -n3 -e'/3 "AA:AA:AA" 3/1 ":%02X"' /dev/urandom)
         MAC=$(printf "AA:AA:AA:AA:%02x:%02x" $HOSTNUM $IFACENUM)
-        echo "MAC= $MAC"
+        # echo "MAC= $MAC"
         PORTNUM=${SWPORTNUM[$SWITCHNAME]}
         NETOPT="$NETOPT -netdev vde,sock=$SWITCHDIR,port=$PORTNUM,id=$ID -device $NETDEV,netdev=$ID,mac=$MAC"
-        # VLAN management (http://wiki.virtualsquare.org/wiki/index.php/VDE)
+        # echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM (vlan $VLAN)"
+	echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM"	
+	# VLAN management (http://wiki.virtualsquare.org/wiki/index.php/VDE)
         if [ "$USEVLAN" -eq 1 ] ; then
             echo "port/setnumports $SWMAXNUMPORTS" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null   # set max num ports (TODO: only the first time)
-            echo "vlan/create $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null                 # create new VLAN (TODO: create only the first time)
             echo "port/create $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null              # create switch port
-            echo "port/setvlan $PORTNUM $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null       # set port to vlan (as untagged)
-            # echo "vlan/addport $VLAN $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null     # set port to vlan (as tagged)
+            # echo "vlan/create $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null               # create new VLAN (TODO: create only the first time)
+            # echo "port/setvlan $PORTNUM $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null     # set port to vlan (as untagged)
+            ## echo "vlan/addport $VLAN $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null    # set port to vlan (as tagged)
+	    if [ -r $SWITCHCMD ] ; then		
+		echo "load $SWITCHCMD" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null               # load switch configuration
+		echo "=> load switch configuration \"$SWITCHCMD\""
+	    fi
         fi
         # print switch log for debug
         echo "vlan/allprint" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &>> $SWITCHLOG                     # print log
         echo "port/allprint" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &>> $SWITCHLOG                     # print log
-        echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM (vlan $VLAN)"
-
 
         IFACENUM=$(expr $IFACENUM + 1)
         SWPORTNUM[$SWITCHNAME]=$(expr $PORTNUM + 1)
@@ -546,7 +553,7 @@ HOST() {
     HOSTSYS="${SYS[$SYSNAME]}"
     HOSTKERNEL="${KERNEL[$SYSNAME]}"
     HOSTINITRD="${INITRD[$SYSNAME]}"
-    HOSTQCOW="$SESSION/$HOSTNAME.qcow2"
+    HOSTQCOW="$SESSIONDIR/$HOSTNAME.qcow2"
 
     # check SESSIONDIR
     if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory $SESSIONDIR does not exist!" ; EXIT ; fi
@@ -566,9 +573,10 @@ HOST() {
 
     # use raw or qcow2 system image
     if [ "$RAW" -eq 1 ] ; then
-        CMD="$CMD -hda $HOSTFS"   # use raw image file
+        # CMD="$CMD -hda $HOSTFS"   # use raw image file
+	CMD="$CMD -drive format=raw,file=$HOSTFS"
     else
-        # ln -sf $HOSTFS $SESSION/$HOSTNAME.img
+        # ln -sf $HOSTFS $SESSIONDIR/$HOSTNAME.img
         # create qcow2 if needed
         CREATEQCOW $HOSTFS $HOSTQCOW
         if ! [ -r "$HOSTQCOW" ] ; then echo "ERROR: Qcow2 image file $HOSTQCOW not found!"; EXIT ; fi
@@ -603,10 +611,10 @@ HOST() {
     CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
     
     # xterm (linux only)
-    if [ "$HOSTSYS" = "linux" -a "$XTERM" -eq 1 ] ; then
-        if ! [ -r "$HOSTKERNEL" -a  -r "$HOSTINITRD" ] ; then
-            echo "ERROR: Linux kernel or initrd file is missing. Dont use -x option." ; EXIT ;
-        fi
+    if [ "$HOSTSYS" = "linux" -a "$XTERM" -eq 1 -a -r "$HOSTKERNEL" -a -r "$HOSTINITRD" ] ; then
+        # if ! [ -r "$HOSTKERNEL" -a  -r "$HOSTINITRD" ] ; then
+        #    echo "ERROR: Linux kernel or initrd file is missing. Dont use -x option." ; EXIT ;
+        # fi
         # append kernel args
         KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0"
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
@@ -644,8 +652,8 @@ TRUNK(){
     SWITCH1=$1
     SWITCH2=$2
 
-    if ! [ -f  $SESSION/$SWITCH1.pid ]; then "ERROR: Unknown switch $SWITCH1 !" ; EXIT ; fi
-    if ! [ -f  $SESSION/$SWITCH2.pid ]; then "ERROR: Unknown switch $SWITCH2 !" ; EXIT ; fi
+    if ! [ -f  $SESSIONDIR/$SWITCH1.pid ]; then "ERROR: Unknown switch $SWITCH1 !" ; EXIT ; fi
+    if ! [ -f  $SESSIONDIR/$SWITCH2.pid ]; then "ERROR: Unknown switch $SWITCH2 !" ; EXIT ; fi
 
     echo "=> Trunk link between switch $SWITCH1 and switch $SWITCH2"
 
@@ -654,7 +662,7 @@ TRUNK(){
 
     # a strange behavior was observed with the following command, thus we need to move to a writable directory before calling dpipe ...
     echo "[$SWITCH1]---[$SWITCH2] dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2"
-    (cd $SESSION; dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2  >& /dev/null &)
+    (cd $SESSIONDIR; dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2  >& /dev/null &)
 
     PID=$!
     TRUNKPIDS="$TRUNKPIDS $PID"
@@ -690,10 +698,16 @@ EXIT() {
         if [ -n "$TRUNKPIDS" ] ; then kill -9 $TRUNKPIDS 2> /dev/null; wait $! 2> /dev/null ; fi
         # clean session files
         if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
+<<<<<<< HEAD
         rm -f $SESSION/*.pid $SESSION/*.mgmt $SESSION/*.log
         rm -f $LOCK	
 	tmux kill-session -t $SESSIONID	
 	exit
+=======
+        rm -f $SESSIONDIR/*.pid $SESSIONDIR/*.mgmt $SESSIONDIR/*.log
+        rm -f $LOCK
+        exit
+>>>>>>> master
     fi
 }
 
@@ -727,13 +741,13 @@ START() {
         source $TOPOLOGY
     fi
     echo "********** Waiting end of Session **********"
-    echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSION"
+    echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     if [ "$MONITOR" -eq 1 ] ; then
-	echo "=> To acces the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
+	echo "=> To access the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
     fi
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
-    echo "=> Then, to restore it, type: \"./qemunet.sh -s mysession.tgz\""    
+    echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""    
     # tmux kill-pane -t $SESSIONID:0.0 # remove first pane (console)
     # tmux select-layout -t $SESSIONID tiled
     WAIT

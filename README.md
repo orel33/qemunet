@@ -27,12 +27,12 @@ If the KVM test fails, we recommand you to solve this problem before to use *Qem
 
 ### Download & Install ###
 
-QemuNet is a free software distributed under the terms of the GNU General Public License (GPL) and it is available for download at [Inria GitLab](https://gitlab.inria.fr/qemunet). 
+QemuNet is a free software distributed under the terms of the GNU General Public License (GPL) and it is available for download at [Inria GitLab](https://gitlab.inria.fr/esnard/qemunet). 
 
 Let's download it:
 
 ```
-  $ git clone https://gitlab.inria.fr/qemunet/core.git qemunet
+  $ git clone https://gitlab.inria.fr/esnard/qemunet.git qemunet
 ```
 
 The main QemuNet files are described below:
@@ -46,7 +46,7 @@ qemunet
   └── README.md     <-- this file
 ```
 
-By default, the *images* directory is empty. The default system images (described in *qemunet.cfg*) will be automatically download by the QemuNet script at first use. The default *QemuNet* images are available on [Inria GitLab](https://gitlab.inria.fr/qemunet/images).
+By default, the *images* directory is empty. The default system images (described in *qemunet.cfg*) will be automatically download by the QemuNet script at first use. The default *QemuNet* images are available [here](http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/).
 
 ### Test ###
 
@@ -84,7 +84,7 @@ QEMUOPT[debian]="-localtime -m 512"
 FS[debian]="$IMGDIR/debian/debian.img"
 KERNEL[debian]="$IMGDIR/debian/debian.vmlinuz"
 INITRD[debian]="$IMGDIR/debian/debian.initrd"
-URL[debian]="https://gitlab.inria.fr/qemunet/images/raw/master/debian.tgz"
+URL[debian]="http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/debian.tgz"
 ```
 
 Following, you can launch your Virtual Network (VN). All the current session files are provided in the *session* directory, that is linked to a unique directory in /tmp. 
@@ -210,7 +210,19 @@ The SYS and FS arrays are required for each system. They respectively define the
 
 ### How to use my own image in QemuNet? ###
 
-Instead of using the default GIT repository for *images*, you should prefer to install your own images in the *images* subdirectory (or elsewhere). In this case, you will need to update the configuration file provided in *qemunet.cfg*. Please visit this [wiki](http://aurelien.esnard.emi.u-bordeaux.fr/teaching/doku.php?id=qemunet:index) for further details.
+Instead of using the default repository for QemuNet *images* (available [here](http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/)), you should prefer to install your own images in the *images* subdirectory (or elsewhere). In this case, you will need to update the configuration file provided in *qemunet.cfg*. 
+Please visit this [wiki](http://aurelien.esnard.emi.u-bordeaux.fr/teaching/doku.php?id=qemunet:index) for further details.
+
+### VLAN support in QemuNet ###
+
+You can start to have a look in the "vlan" and "trunk" samples provided in demo/ :
+
+```
+$ ./qemunet.sh -v -x -y -s demo/vlan.tgz
+$ ./qemunet.sh -v -x -y -s demo/trunk.tgz  # see TRUNK keyword in topology file
+```
+
+The "-v" option is required to enable VLAN support in QemuNet. The "-y" option starts the VDE switch management console. See documentation [here](http://wiki.virtualsquare.org/wiki/index.php/VLAN_trunking) to know how to configure your VLAN on a VDE switch. It is also possible to provide a file named "switchname.cmd" in the session directory that will be load by the VDE switch at boot time.
 
 ### Documentation ###
 
