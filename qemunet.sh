@@ -663,7 +663,7 @@ TRUNK(){
 ### WAIT ###
 
 WAIT() {
-    TMUXPIDS=$(tmux list-panes -s -t $SESSIONID  -F "#{pane_pid}") # wait cannot be used for TMUX processes are not children!
+    TMUXPIDS=$(tmux list-panes -s -t $SESSIONID  -F "#{pane_pid}") # wait cannot be used for TMUX processes are not children of this bash script!
     wait $HOSTPIDS # only wait hosts (not switch, etc)
     TTY=$(tmux list-panes -t $SESSIONID:0.0 -F "#{pane_tty}")
     echo "Welcome in QemuNet! Press \"C-b C-c\" to kill the TMUX session." > $TTY
