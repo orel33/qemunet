@@ -67,12 +67,64 @@ WGET="wget"
 TERMCMD () { echo "tmux new-window -t $SESSIONID -n $1" ; } # windows
 # TERMCMD () { echo "tmux split-window -t $SESSIONID" ; }   # panes
 
-# TMUX
-tmux start-server
-tmux new-session -d -s $SESSIONID -n console bash # tmux console
-tmux set-option -t $SESSIONID default-shell /bin/bash 
-tmux set-option -t $SESSIONID mouse on 
-tmux bind-key C-c kill-session  # press "C-b C-c" to kill session!
+### TMUX ###
+
+TMUX_START() {
+    tmux start-server
+    tmux new-session -d -s $SESSIONID -n console bash # tmux console
+    tmux set-option -t $SESSIONID -g default-shell /bin/bash 
+    tmux set-option -t $SESSIONID -g mouse on # enable to select panes/windows  with mouse (howewer, hold shift key, to copy/paste with mouse)
+    # tmux set-option -g prefix C-b    
+    tmux bind-key C-c kill-session  # press "C-b C-c" to kill session!
+    # tmux set-window-option -g window-status-current-bg red
+    # tmux set-window-option -g aggressive-resize on
+    # tmux set-option -g allow-rename off
+    tmux set-option -g status-left ''
+    tmux set-option -g status-right '#[fg=colour233,bg=colour241,bold] %d/%m/%Y #[fg=colour233,bg=colour245,bold] %H:%M:%S '
+    # tmux bind-key S source-file $QEMUNETDIR/split.tmux
+    # tmux bind-key J source-file $QEMUNETDIR/join.tmux
+    # tmux send-keys 'emacs -nw' C-m   # run commands
+}
+
+# join multiple tmux windows in tiled panes
+TMUX_JOIN() {
+    # WINS=$(tmux list-windows -t $SESSIONID -F "#{window_index}")
+    NBWINS=$(tmux list-windows -t $SESSIONID -F "#{window_index}" | wc -l)
+    NBWINS=$(expr $NBWINS - 1)
+    for WIN in $(seq 2 $NBWINS) ; do tmux join -t $SESSIONID -s $WIN -t 1 ; done
+    tmux select-layout -t $SESSIONID tiled        
+}
+
+# multiple tmux windows in tiled panes
+TMUX_SPLIT() {
+    NBPANES=$(tmux list-panes -t $SESSIONID:1 -F "#{pane_index}" | wc -l)
+    for PANE in $(seq 2 $NBPANES) ; do tmux break-pane -t $SESSIONID -d -s 1.0 ; done
+    # tmux break-pane -n "win0"-t $SESSIONID -d -s 1.0 
+}
+
+TMUX_ATTACH() {
+    TMUXPIDS=$(tmux list-panes -s -t $SESSIONID  -F "#{pane_pid}") # wait cannot be used, for TMUX processes are not children of this bash script!
+    TMUXTTY=$(tmux list-panes -t $SESSIONID:0 -F "#{pane_tty}")
+    echo > $TMUXTTY
+    cat $QEMUNETDIR/logo.txt > $TMUXTTY
+    echo > $TMUXTTY
+    echo "***********************************************" > $TMUXTTY
+    echo "TMUX session name: $SESSIONID" > $TMUXTTY
+    echo "Press \"C-b C-c\" to kill the TMUX session." > $TMUXTTY
+    echo "Hold shift key, to copy/paste with mouse middle-button." > $TMUXTTY
+    echo "***********************************************" > $TMUXTTY    
+    echo > $TMUXTTY
+    echo > $TMUXTTY    
+    # TMUX_JOIN
+    # TMUX_SPLIT    
+    tmux select-window -t $SESSIONID:0  # select console (window index 0)
+    tmux attach-session -t $SESSIONID   # tmux in foreground
+}
+
+
+TMUX_EXIT() {
+    tmux kill-session -t $SESSIONID &> /dev/null
+}
 
 ### LOGO ###
 
@@ -83,7 +135,6 @@ LOGO() {
 ### USAGE ###
 
 USAGE() {
-    LOGO
     echo "A light shell script based on QEMU Virtual Machine (VM) and VDE Virtual Switch to enable easy Virtual Networking."
     echo
     echo "Start/restore a session:"
@@ -112,83 +163,93 @@ USAGE() {
     exit
 }
 
-### PARSE ARGUMENTS ###
+### GET ARGUMENTS ###
 
-while getopts "t:a:s:S:c:l:imMkKxyqvdh" OPT; do
-    case $OPT in
-        t)
-            if [ -n "$MODE" ] ; then USAGE ; fi
-            MODE="SESSION"
-            TOPOLOGY="$OPTARG"
-            ;;
-        s)
-            if [ -n "$MODE" ] ; then USAGE ; fi
-            MODE="SESSION"
-            SESSIONARCHIVE="$OPTARG"
-            ;;
-        S)
-            if [ -n "$MODE" ] ; then USAGE ; fi
-            MODE="SESSION"
-            SESSIONDIR="$OPTARG"
-            ;;
-        a)
-            IMGARCHIVE="$OPTARG"
-            ;;
-        l)
-            if [ -n "$MODE" ] ; then USAGE ; fi
-            MODE="STANDALONE"
-            RAW=1
-            INTERNET=1
-            SESSIONDIR="/tmp/$SESSIONID"
-            mkdir -p $SESSIONDIR
-            THESYSNAME="$OPTARG"
-            THEHOSTNAME="$OPTARG"
-            ;;
-        c)
-            QEMUNETCFG="$OPTARG"
-            ;;
-        i)
-            INTERNET=1
-            ;;
-        m)
-            MOUNT=1
-            ;;
-        M)
-            MOUNT=0
-            ;;
-        x)
-            XTERM=1
-            ;;
-        y)
-            SWITCHXTERM=1
-            ;;
-        k)
-            NOKVM=0
-            ;;
-        K)
-            NOKVM=1
-            ;;
-        v)
-            USEVLAN=1
-            ;;
-        d)
-            MONITOR=1
-            ;;
-        q)
-            RMQCOW2=1
-            ;;
-        h)
-            USAGE
-            ;;
-        \?)
-            echo "Invalid option!"
-            USAGE
-            ;;
-    esac
-done
+GETARGS() {
+    # echo "ARGS: $*"
+    while getopts "t:a:s:S:c:l:imMkKxyqvdh" OPT; do
+	case $OPT in
+	    ### main options ###
+            t)
+		if [ -n "$MODE" ] ; then USAGE ; fi
+		MODE="SESSION"
+		TOPOLOGY="$OPTARG"
+		;;
+            s)
+		if [ -n "$MODE" ] ; then USAGE ; fi
+		MODE="SESSION"
+		SESSIONARCHIVE="$OPTARG"
+		;;
+            S)
+		if [ -n "$MODE" ] ; then USAGE ; fi
+		MODE="SESSION"
+		SESSIONDIR="$OPTARG"
+		;;
+            a)
+		IMGARCHIVE="$OPTARG"
+		;;
+            l)
+		if [ -n "$MODE" ] ; then USAGE ; fi
+		MODE="STANDALONE"
+		RAW=1
+		INTERNET=1
+		SESSIONDIR="/tmp/$SESSIONID"
+		mkdir -p $SESSIONDIR
+		THESYSNAME="$OPTARG"
+		THEHOSTNAME="$OPTARG"
+		TOPOLOGY=$SESSIONDIR/topology
+		echo "HOST $THESYSNAME $THEHOSTNAME" > $TOPOLOGY
+		;;
+            c)
+		QEMUNETCFG="$OPTARG"
+		;;
+	    ### advanced options ###
+            i)
+		INTERNET=1
+		# Don't forget to launch the DHCP client in QEMU if you want to connect Internet using the Slirp interface.
+		;;
+            m)
+		MOUNT=1
+		;;
+            M)
+		MOUNT=0
+		;;
+            x)
+		XTERM=1
+		;;
+            y)
+		SWITCHXTERM=1
+		;;
+            k)
+		NOKVM=0
+		;;
+            K)
+		NOKVM=1
+		;;
+            v)
+		USEVLAN=1
+		;;
+            d)
+		MONITOR=1
+		;;
+            q)
+		RMQCOW2=1
+		;;
+	    ### help ###
+            h)
+		USAGE
+		;;
+            \?)
+		echo "Invalid option!"
+		USAGE
+		;;
+	esac
+    done
+    
+    if [ $# -eq 0 ] ; then USAGE ; fi
+    if [ -z "$MODE" ] ; then USAGE ; fi
 
-if [ $# -eq 0 ] ; then USAGE ; fi
-if [ -z "$MODE" ] ; then USAGE ; fi
+}
 
 ### 1) CHECK RC ###
 
@@ -321,12 +382,10 @@ INITSESSION() {
     else touch $LOCK ; fi
 
     ### PRINT SESSION
-
-    echo "MODE: $MODE"
+    echo "SESSION ID: $SESSIONID"
     echo "SESSION DIRECTORY: $SESSIONDIR"
     echo "SESSION LINK: $SESSIONLINK"
     echo "QEMUNET CFG: $QEMUNETCFG"
-    echo "QEMUNET MODE: $MODE"
     echo "NETWORK TOPOLOGY: $TOPOLOGY"
     echo "IMAGE ARCHIVE: $IMGARCHIVE"
     echo "SESSION ARCHIVE: $SESSIONARCHIVE"
@@ -625,7 +684,6 @@ HOST() {
         echo "[$HOSTNAME] $CMD"
 	$XCMD $CMDFILE
 	# xterm -e $CMDFILE &
-	# tmux select-layout -t $SESSIONID tiled
     else
         echo "[$HOSTNAME] $CMD"
 	echo $CMD > $CMDFILE && chmod +x $CMDFILE
@@ -671,14 +729,7 @@ TRUNK(){
 ### WAIT ###
 
 WAIT() {
-    TMUXPIDS=$(tmux list-panes -s -t $SESSIONID  -F "#{pane_pid}") # wait cannot be used for TMUX processes are not children of this bash script!
     wait $HOSTPIDS # only wait hosts (not switch, etc)
-    TTY=$(tmux list-panes -t $SESSIONID:0.0 -F "#{pane_tty}")
-    echo "Welcome in QemuNet! Press \"C-b C-c\" to kill the TMUX session." > $TTY
-     #tmux send-keys -t $SESSIONID:0.0 'echo Welcome in QemuNet!' Enter
-    # tmux send-keys -t $SESSIONID:0.0 'echo Kill tmux session: tmux kill-session -t $SESSIONID' Enter
-    tmux attach-session -t $SESSIONID
-    # while  $(tmux has-session -t $SESSIONID 2> /dev/null )  ; do sleep 1 ; done
 }
 
 ### EXIT ###
@@ -698,16 +749,10 @@ EXIT() {
         if [ -n "$TRUNKPIDS" ] ; then kill -9 $TRUNKPIDS 2> /dev/null; wait $! 2> /dev/null ; fi
         # clean session files
         if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
-<<<<<<< HEAD
-        rm -f $SESSION/*.pid $SESSION/*.mgmt $SESSION/*.log
-        rm -f $LOCK	
-	tmux kill-session -t $SESSIONID	
-	exit
-=======
         rm -f $SESSIONDIR/*.pid $SESSIONDIR/*.mgmt $SESSIONDIR/*.log
         rm -f $LOCK
+	TMUX_EXIT
         exit
->>>>>>> master
     fi
 }
 
@@ -724,22 +769,15 @@ trap 'EXIT' INT EXIT TERM
 ### START ###
 
 START() {
-    LOGO
+    TMUX_START   
     echo "********** Let's Rock **********"
     CHECKRC
     echo "********** Loading VM Config **********"
     LOADCONF
     echo "********** Init Session **********"
     INITSESSION
-    ###
-    if [ "$MODE" = "STANDALONE" ] ; then
-        echo "********** Starting Standalone Session **********"
-        HOST $THESYSNAME $THEHOSTNAME
-        # echo "=> Don't forget to launch the DHCP client in QEMU if you want to connect Internet using the Slirp interface."	
-    else
-        echo "********** Starting Session with Given Topology **********"
-        source $TOPOLOGY
-    fi
+    echo "********** Starting Session with Given Topology **********"
+    source $TOPOLOGY
     echo "********** Waiting end of Session **********"
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
@@ -748,8 +786,7 @@ START() {
     fi
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""    
-    # tmux kill-pane -t $SESSIONID:0.0 # remove first pane (console)
-    # tmux select-layout -t $SESSIONID tiled
+    TMUX_ATTACH
     WAIT
     END
     # trap call EXIT at regular exit!
@@ -757,6 +794,8 @@ START() {
 
 ### LET's ROCK ###
 
+LOGO
+GETARGS $*
 START
 
 # EOF
