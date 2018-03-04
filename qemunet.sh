@@ -64,19 +64,22 @@ WGET="wget"
 
 # TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # $1:title, $2:cmd $...: args
 # TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" ; }
-TERMCMD () { echo "tmux new-window -t $SESSIONID -n $1" ; } # windows
-# TERMCMD () { echo "tmux split-window -t $SESSIONID" ; }   # panes
+TERMCMD () { echo "tmux new-window -t $TMUXID -n $1" ; } # windows
+# TERMCMD () { echo "tmux split-window -t $TMUXID" ; }   # panes
 
 ### TMUX ###
 
+# TMUXID="$SESSIONID"
+TMUXID="qemunet"
+
 TMUX_START() {
     tmux start-server
-    tmux new-session -d -s $SESSIONID -n console bash # tmux console
-    tmux set-option -t $SESSIONID -g default-shell /bin/bash 
-    tmux set-option -t $SESSIONID -g mouse on # enable to select panes/windows  with mouse (howewer, hold shift key, to copy/paste with mouse)
+    tmux new-session -d -s $TMUXID -n console bash # tmux console
+    tmux set-option -t $TMUXID -g default-shell /bin/bash 
+    tmux set-option -t $TMUXID -g mouse on # enable to select panes/windows  with mouse (howewer, hold shift key, to copy/paste with mouse)
     # tmux set-option -g prefix C-b    
     tmux bind-key C-c kill-session  # press "C-b C-c" to kill session!
-    # tmux set-window-option -g window-status-current-bg red
+    tmux set-window-option -g window-status-current-bg red
     # tmux set-window-option -g aggressive-resize on
     # tmux set-option -g allow-rename off
     tmux set-option -g status-left ''
@@ -85,32 +88,34 @@ TMUX_START() {
     tmux bind W select-window -t :0 \\\; send-keys "$QEMUNETDIR/tmux-windows.sh" Enter \\\; select-window -t :1 # multiple windows
 }
 
+# tmux lsp -s -t $TMUXID:
+
 # join multiple tmux windows in tiled panes
 TMUX_JOIN() {
-    # WINS=$(tmux list-windows -t $SESSIONID -F "#{window_index}")
-    # NBWINS=$(tmux list-windows -t $SESSIONID -F "#{window_index}" | wc -l)
+    # WINS=$(tmux list-windows -t $TMUXID -F "#{window_index}")
+    # NBWINS=$(tmux list-windows -t $TMUXID -F "#{window_index}" | wc -l)
     NBWINS=$(tmux list-windows -F "#{window_index}" | wc -l)
     NBWINS=$(expr $NBWINS - 1)
-    # for WIN in $(seq 2 $NBWINS) ; do tmux join -t $SESSIONID -s $WIN -t 1 ; done
+    # for WIN in $(seq 2 $NBWINS) ; do tmux join -t $TMUXID -s $WIN -t 1 ; done
     for WIN in $(seq 2 $NBWINS) ; do tmux join -s $WIN -t 1 ; done
     tmux select-layout tiled        
 }
 
-# multiple tmux windows in tiled panes
+# split tiled panes in multiple windows
 TMUX_SPLIT() {
-    NBPANES=$(tmux list-panes -t $SESSIONID:1 -F "#{pane_index}" | wc -l)
-    for PANE in $(seq 2 $NBPANES) ; do tmux break-pane -t $SESSIONID -d -s 1.0 ; done
-    # tmux break-pane -n "win0"-t $SESSIONID -d -s 1.0 
+    NBPANES=$(tmux list-panes -t $TMUXID:1 -F "#{pane_index}" | wc -l)
+    for PANE in $(seq 2 $NBPANES) ; do tmux break-pane -t $TMUXID -d -s 1.0 ; done
+    # tmux break-pane -n "win0"-t $TMUXID -d -s 1.0 
 }
 
 TMUX_ATTACH() {
-    TMUXPIDS=$(tmux list-panes -s -t $SESSIONID  -F "#{pane_pid}") # wait cannot be used, for TMUX processes are not children of this bash script!
-    TMUXTTY=$(tmux list-panes -t $SESSIONID:0 -F "#{pane_tty}")
+    TMUXPIDS=$(tmux list-panes -s -t $TMUXID  -F "#{pane_pid}") # wait cannot be used, for TMUX processes are not children of this bash script!
+    TMUXTTY=$(tmux list-panes -t $TMUXID:0 -F "#{pane_tty}")
     echo > $TMUXTTY
     cat $QEMUNETDIR/logo.txt > $TMUXTTY
     echo > $TMUXTTY
     echo "***********************************************" > $TMUXTTY
-    echo "TMUX session name: $SESSIONID" > $TMUXTTY
+    echo "TMUX session name: $TMUXID" > $TMUXTTY
     echo "Press \"C-b C-c\" to kill the TMUX session." > $TMUXTTY
     echo "Hold shift key, to copy/paste with mouse middle-button." > $TMUXTTY
     echo "***********************************************" > $TMUXTTY    
@@ -118,13 +123,13 @@ TMUX_ATTACH() {
     echo > $TMUXTTY    
     # TMUX_JOIN
     # TMUX_SPLIT    
-    tmux select-window -t $SESSIONID:0  # select console (window index 0)
-    tmux attach-session -t $SESSIONID   # tmux in foreground
+    tmux select-window -t $TMUXID:0  # select console (window index 0)
+    tmux attach-session -t $TMUXID   # tmux in foreground
 }
 
 
 TMUX_EXIT() {
-    tmux kill-session -t $SESSIONID &> /dev/null
+    tmux kill-session -t $TMUXID &> /dev/null
 }
 
 ### LOGO ###
