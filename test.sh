@@ -71,6 +71,10 @@ CMD="qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY" # too lon
 # solution 3
 eval "$CMD"
 
+# solution 4 (should work, but i don't know exactly how...)
+# ARRAYCMD=(qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY)
+# bash -c "${ARRAYCMD[@]}"
+
 # For Qemu command in background (&)
 # PID=$!
 # echo "qemu pid: $PID"
