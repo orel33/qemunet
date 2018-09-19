@@ -26,12 +26,12 @@ If the KVM test fails, we recommand you to solve this problem before to use *Qem
 
 ### Download & Install
 
-QemuNet is a free software distributed under the terms of the GNU General Public License (GPL) and it is available for download at [Inria GitLab](https://gitlab.inria.fr/esnard/qemunet).
+QemuNet is a free software distributed under the terms of the GNU General Public License (GPL) and it is available for download on [GitHub](https://github.com/orel33/qemunet).
 
 Let's download it:
 
 ```bash
-git clone https://gitlab.inria.fr/esnard/qemunet.git qemunet
+git clone https://github.com/orel33/qemunet.git
 ```
 
 The main QemuNet files are described below:
@@ -58,11 +58,12 @@ Now, you can launch the following tests, that are  based on a *Linux TinyCore* s
 
 At this point, if you get some errors, go to the *Configuration" section.
 
+
 ### Let's start with a basic LAN
 
 You will find several examples in the *demo* subdirectory. But, let's start with a basic LAN topology.
 
-First, you need to prepare a virtual topology file, as for example [demo/lan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/lan.topo). It describes a LAN with 4 *debian* Virtual Machines (VM), named *host1* to *host4* and one Virtual Switch (VS) named *s1*. The *debian* system must refer to a valid system in the *QemuNet* configuration file [qemunet.cfg](https://gitlab.inria.fr/qemunet/core/raw/master/qemunet.cfg).
+First, you need to prepare a virtual topology file, as for example [demo/lan.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/lan.topo). It describes a LAN with 4 *debian* Virtual Machines (VM), named *host1* to *host4* and one Virtual Switch (VS) named *s1*. The *debian* system must refer to a valid system in the *QemuNet* configuration file [qemunet.cfg](https://raw.githubusercontent.com/orel33/qemunet/master/qemunet.cfg).
 
 ```bash
 # SWICTH switchname
@@ -121,15 +122,15 @@ In addition, we use a startup script to load a user-defined script "/mnt/host/st
 
 ### Other Examples
 
-Other samples are available in the [demo](https://gitlab.inria.fr/qemunet/core/tree/master/demo) subdirectory, as for instance:
+Other samples are available in the [demo](https://github.com/orel33/qemunet/tree/master/demo) subdirectory, as for instance:
 
-* [demo/single.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/single.topo) : a basic single "debian" VM (no network)
-* [demo/lan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/lan.topo) : a LAN of 4 "debian" VMs interconnected by a switch 
-* [demo/chain.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/chain.topo) : a chain of 5 "debian" VMs interconnected by 4 switches
-* [demo/gw.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/gw.topo) : an example of LAN with a gateway connected to an external LAN
-* [demo/dmz.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/dmz.topo) : a more complex topology with two internal LANs (including a DMZ) 
-* [demo/vlan.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/vlan.topo) : a basic LAN divided in two VLANs
-* [demo/trunk.topo](https://gitlab.inria.fr/qemunet/core/raw/master/demo/trunk.topo) : two VLANs with trunking
+* [demo/single.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/single.topo) : a basic single "debian" VM (no network)
+* [demo/lan.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/lan.topo) : a LAN of 4 "debian" VMs interconnected by a switch 
+* [demo/chain.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/chain.topo) : a chain of 5 "debian" VMs interconnected by 4 switches
+* [demo/gw.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/gw.topo) : an example of LAN with a gateway connected to an external LAN
+* [demo/dmz.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/dmz.topo) : a more complex topology with two internal LANs (including a DMZ) 
+* [demo/vlan.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/vlan.topo) : a basic LAN divided in two VLANs
+* [demo/trunk.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/trunk.topo) : two VLANs with trunking
 
 ### How to upgrade an image used by QemuNet?
 
@@ -191,7 +192,7 @@ QEMUIMG="/usr/bin/qemu-img"
 VDESWITCH="/usr/bin/vde_switch"
 ```
 
-Then, you have to provide a configuration file that defines several virtual systems and its parameters (name, type, disk image file, ...). The default configuration file is *[qemunet.cfg](https://gitlab.inria.fr/qemunet/core/raw/master/qemunet.cfg). It is a bash script that uses associative arrays (bash 4 or greater required). Here is a template file:
+Then, you have to provide a configuration file that defines several virtual systems and its parameters (name, type, disk image file, ...). The default configuration file is *[qemunet.cfg](https://raw.githubusercontent.com/orel33/qemunet/master/qemunet.cfg). It is a bash script that uses associative arrays (bash 4 or greater required). Here is a template file:
 
 ```bash
 # IMGDIR="/absolute/path/to/raw/system/images"
