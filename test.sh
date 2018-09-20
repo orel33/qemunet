@@ -48,18 +48,18 @@ DISPLAY="-nographic"   # ok (no graphic display + redirect on stdio)
 # SHARE="-fsdev local,id=share0,path=$SESSIONDIR,security_model=mapped -device virtio-9p-pci,fsdev=share0,mount_tag=host"
 
 ### BOOT ###
-BOOTARG="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0"
-BOOT="-kernel $KERNEL -initrd $INITRD -append \"$BOOTARG\""
+#BOOTARG="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0"
+# BOOT="-kernel $KERNEL -initrd $INITRD -append \"$BOOTARG\""
+BOOT="-kernel $KERNEL -initrd $INITRD -append \"root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0\""
 
 ####################### RUN QEMU #######################
 
 qemu-img create -q -b $IMG -f qcow2 $SESSIONDIR/my.qcow2 # create qcow image based on raw image
 
 CMD="qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY" # too long variable?
-# echo "$CMD"
 
 # solution 0 (fail because double-quote expansion in -append option)
-# qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY & 
+# $CMD
 
 # solution 1
 # bash -c "$CMD"
@@ -69,11 +69,10 @@ CMD="qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY" # too lon
 # bash -c 'eval $CMD' # my trick
 
 # solution 3
-eval "$CMD"
+# eval "$CMD"
 
-# solution 4 (should work, but i don't know exactly how...)
-# ARRAYCMD=(qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY)
-# bash -c "${ARRAYCMD[@]}"
+# solution 4
+# bash -c "echo $CMD ; ${CMD[@]}"
 
 # For Qemu command in background (&)
 # PID=$!
