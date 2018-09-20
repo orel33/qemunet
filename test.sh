@@ -72,7 +72,7 @@ CMD="qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY" # too lon
 # eval "$CMD"
 
 # solution 4
-# bash -c "echo $CMD ; ${CMD[@]}"
+bash -c "echo $CMD ; ${CMD[@]}"
 
 # For Qemu command in background (&)
 # PID=$!
