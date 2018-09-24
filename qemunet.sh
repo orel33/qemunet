@@ -711,21 +711,25 @@ HOST() {
         # CMD="$CMD -nographic"
         CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
-        export CMD
-        bash -c 'eval $CMD' &
+        # export CMD
+        # bash -c 'eval $CMD' &
+        bash -c "${CMD[@]}" &
     elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "tmux" ] # serial / xterm mode
     then
         CMD="$CMD -nographic"
         XCMD=$(TERMCMD $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
         # echo $CMD > $CMDFILE && chmod +x $CMDFILE
-        export CMD
-        $XCMD bash -c 'eval $CMD' &
+        # export CMD
+        # $XCMD bash -c 'eval $CMD' &
+        # $XCMD bash -c 'eval $CMD' &
+        $XCMD "${CMD[@]}" &
     else # standard / graphic mode
         echo "[$HOSTNAME] $CMD"
         # echo $CMD > $CMDFILE && chmod +x $CMDFILE
-        export CMD
-        bash -c 'eval $CMD' &
+        # export CMD
+        # bash -c 'eval $CMD' &
+        bash -c "${CMD[@]}" &
     fi
 
     PID=$!
