@@ -1,0 +1,6 @@
+*.tgz
+*.vmlinuz
+*.initrd
+*.img
+*~
+session
