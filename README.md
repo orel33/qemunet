@@ -152,7 +152,7 @@ history -c
 
 Be careful, all the modifications will be saved definitely in the raw image of the system, i.e. in the file *images/debian/debian.img*.
 
-### Manual ###
+### Manual
 
 QemuNet is based on a single bash script *qemunet.sh*. Here are detailed available options for this command:
 
