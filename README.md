@@ -1,6 +1,8 @@
-# QemuNet
+# Virtual Network with QemuNet
 
 *QemuNet is a light shell script based on QEMU and VDE to enable easy virtual networking.*
+
+## QemuNet
 
 ### Requirements
 
@@ -244,6 +246,20 @@ The "-v" option is required to enable VLAN support in QemuNet. The "-y" option s
 * User Mode Linux: http://user-mode-linux.sourceforge.net
 * GNS3: https://www.gns3.com
 
+## QemuNetWeb 
+
+I am currently working on a web extension of QemuNet based on:
+
+- QemuNet topology launch via Node.JS for backend
+- Web browser running (multiple Xterm.js) for frontend...
+- Real-time communication based on web socket between the two sides...
+
+The idea is to give my students an easy solution to use Virtual Network @ Home and to learn network easily ;-)
+
+Follow branch qemunetweb on github.
+
 ### Contact me
 
-mailto:aurelien.esnard@u-bordeaux.fr
+<mailto:aurelien.esnard@u-bordeaux.fr>
+
+
