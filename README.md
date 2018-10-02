@@ -13,7 +13,7 @@ sudo apt-get install qemu qemu-kvm vde2 libattr1 libvirt0 socat rlwrap wget virt
 In practice, *QemuNet* requires QEMU (qemu-system-x86_64) with VDE and KVM supports enabled and with a *version greater than or equal to 2.1*!!! Check it:
 
 ```bash
-qemu-system-x86_64 --version  
+qemu-system-x86_64 --version
 ```
 
 By default *QemuNet* use the KVM support, to speed up the QEMU execution. To check if KVM is well installed, you can launch the following commmand.
@@ -38,7 +38,7 @@ The main QemuNet files are described below:
 
 ```text
 qemunet
-  ├── demo/         <-- some basic examples of topology 
+  ├── demo/         <-- some basic examples of topology
   ├── images/       <-- default empty directory to store system images
   ├── qemunet.cfg   <-- the default qemunet configuration file
   ├── qemunet.sh    <-- main qemunet script
@@ -169,14 +169,19 @@ Options:
 Advanced Options:
     -a <images.tgz>: load a qcow2 image archive for all VMs
     -c <config>: load system config file (default is qemunet.cfg)
-    -x: launch VM in xterm terminal instead of SDL native window (only for linux system)
-    -y: launch VDE switch management console in xterm terminal
+    -x: launch VM in xterm terminal (only for linux system running on ttyS0)
+    -d <display>: launch VM with special display mode: 
+       * graphic: standard qemu dislay mode (default mode)
+       * xterm: qemu serial/text mode running within xterm (same as -x option)
+       * rxvt: same as xterm mode, but rxvt command instead
+       * tmux: qemu serial/text mode running within a tmux session
+       * socket: redirect qemu console & monitor display to Unix socket
+    -y: launch VDE switch management console in terminal
     -i: enable Slirp interface for Internet access (ping not allowed)
     -m: mount shared directory in /mnt/host (default for linux system)
     -q: ignore and remove qcow2 images for the running session
     -M: disable mount
     -v: enable VLAN support
-    -d: enable QEMU monitor (for debug purpose)
     -k: enable KVM full virtualization support (default)
     -K: disable KVM full virtualization support (not recommanded)
     -l <sysname>: launch a VM in standalone mode to update its raw disk image

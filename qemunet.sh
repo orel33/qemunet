@@ -94,33 +94,13 @@ TMUX_START() {
     # tmux set-option -g prefix C-b
     tmux bind-key C-c kill-session  # press "C-b C-c" to kill session!
     tmux set-window-option -g window-status-current-bg red
-    # tmux set-window-option -g aggressive-resize on
+    tmux set-window-option -g aggressive-resize on
     # tmux set-option -g allow-rename off
     tmux set-option -g status-left ''
     tmux set-option -g status-right '#[fg=colour233,bg=colour241,bold] %d/%m/%Y #[fg=colour233,bg=colour245,bold] %H:%M:%S '
     tmux bind P select-window -t :0 \\\; send-keys "$QEMUNETDIR/tmux-panes.sh" Enter \\\; select-window -t :1   # one single window with multiple panes
     tmux bind W select-window -t :0 \\\; send-keys "$QEMUNETDIR/tmux-windows.sh" Enter \\\; select-window -t :1 # multiple windows
 }
-
-# tmux lsp -s -t $TMUXID:
-
-# join multiple tmux windows in tiled panes
-# TMUX_JOIN() {
-#     # WINS=$(tmux list-windows -t $TMUXID -F "#{window_index}")
-#     # NBWINS=$(tmux list-windows -t $TMUXID -F "#{window_index}" | wc -l)
-#     NBWINS=$(tmux list-windows -F "#{window_index}" | wc -l)
-#     NBWINS=$(expr $NBWINS - 1)
-#     # for WIN in $(seq 2 $NBWINS) ; do tmux join -t $TMUXID -s $WIN -t 1 ; done
-#     for WIN in $(seq 2 $NBWINS) ; do tmux join -s $WIN -t 1 ; done
-#     tmux select-layout tiled
-# }
-
-# split tiled panes in multiple windows
-# TMUX_SPLIT() {
-#     NBPANES=$(tmux list-panes -t $TMUXID:1 -F "#{pane_index}" | wc -l)
-#     for PANE in $(seq 2 $NBPANES) ; do tmux break-pane -t $TMUXID -d -s 1.0 ; done
-#     # tmux break-pane -n "win0"-t $TMUXID -d -s 1.0
-# }
 
 TMUX_ATTACH() {
     TMUXPIDS=$(tmux list-panes -s -t $TMUXID  -F "#{pane_pid}") # wait cannot be used, for TMUX processes are not children of this bash script!
@@ -697,7 +677,6 @@ HOST() {
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
     fi
-
 
     ### launch qemu command with different display mode (socket, xterm, graphic)
 
