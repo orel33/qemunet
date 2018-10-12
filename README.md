@@ -246,6 +246,11 @@ The "-v" option is required to enable VLAN support in QemuNet. The "-y" option s
 * User Mode Linux: http://user-mode-linux.sourceforge.net
 * GNS3: https://www.gns3.com
 
+## Tips
+
+* To get the QEMU [Monitor](https://en.wikibooks.org/wiki/QEMU/Monitor) console in serial mode, type *Ctrl+A C*.... Then type *help* to get the command list (system_reset, system_powerdown, ...).
+* In case of hard failure with a VM (killed, halted, ...), you can restart it using the script named *hostname.sh* in the session directory!
+
 ## QemuNetWeb 
 
 I am currently working on a web extension of QemuNet based on:
@@ -261,5 +266,3 @@ Follow branch qemunetweb on github.
 ### Contact me
 
 <mailto:aurelien.esnard@u-bordeaux.fr>
-
-
