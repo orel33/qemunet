@@ -4,6 +4,19 @@
 
 ## QemuNet
 
+### Quick Start
+
+Install QemuNet and launch a simple LAN topology:
+
+```bash
+$ ./qemunet.sh -x -t demo/lan.topo
+```
+
+Then, you will get 4 root consoles on Linux/Debian virtual hosts (in text mode):
+
+<center><img src="snap-qemunet.png" width="90%" align="middle"></center>
+
+
 ### Requirements
 
 First of all, the QemuNet script is written in *Bash* version greater than or equal to 4. Then, you can install all the QemuNet dependencies in a Debian-like OS, as follow:
