@@ -67,11 +67,11 @@ TERMCMD () {
     if [ "$QEMUDISPLAY" = "xterm" ] ; then
         echo "xterm -fg white -bg black -T $1 -e" ;
     elif [ "$QEMUDISPLAY" = "rxvt" ] ; then
-        echo "rxvt -bg Black -fg White -title $1 -e" ;
+        echo "rxvt -bg Black -fg White -title $1 -e bash -c" ;
     elif [ "$QEMUDISPLAY" = "gnome" ] ; then
         echo "gnome-terminal -- bash -c" ;
     elif [ "$QEMUDISPLAY" = "xfce4" ] ; then
-        echo "xfce4-terminal -T $1 -x bash -c " ;
+        echo "xfce4-terminal -T $1 -x bash -c" ;
     elif [ "$QEMUDISPLAY" = "tmux" ] ; then
         echo "tmux new-window -t $TMUXID -n $1" ; # windows
         # echo "tmux split-window -t $TMUXID" ; # panes
