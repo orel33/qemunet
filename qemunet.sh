@@ -67,7 +67,11 @@ TERMCMD () {
     if [ "$QEMUDISPLAY" = "xterm" ] ; then
         echo "xterm -fg white -bg black -T $1 -e" ;
     elif [ "$QEMUDISPLAY" = "rxvt" ] ; then
-        echo "rxvt -bg Black -fg White -title $1 -e" ; 
+        echo "rxvt -bg Black -fg White -title $1 -e" ;
+    elif [ "$QEMUDISPLAY" = "gnome" ] ; then
+        echo "gnome-terminal -- bash -c" ;
+    elif [ "$QEMUDISPLAY" = "xfce4" ] ; then
+        echo "xfce4-terminal -T $1 -x bash -c " ;
     elif [ "$QEMUDISPLAY" = "tmux" ] ; then
         echo "tmux new-window -t $TMUXID -n $1" ; # windows
         # echo "tmux split-window -t $TMUXID" ; # panes
@@ -154,8 +158,10 @@ USAGE() {
     echo "       * graphic: standard qemu dislay mode (default mode)"
     echo "       * xterm: qemu serial/text mode running within xterm (same as -x option)"
     echo "       * rxvt: same as xterm mode, but rxvt command instead"
-    echo "       * tmux: qemu serial/text mode running within a tmux session"    
-    echo "       * socket: redirect qemu console & monitor display to Unix socket"    
+    echo "       * gnome: qemu serial/text mode running within gnome-terminal"
+    echo "       * xfce4: qemu serial/text mode running within xfce4-terminal"
+    echo "       * tmux: qemu serial/text mode running within a tmux session (experimental)"
+    echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
     # graphic xterm or rxvt or tmux or  or socket)
     # echo "    -z: launch VM in tmux terminal (only for linux system running on ttyS0)"
     # echo "    -r: redirect VM console & monitor display to Unix socket (only for linux system running on ttyS0)"
@@ -693,7 +699,7 @@ HOST() {
         # export CMD
         # bash -c 'eval $CMD' &
         bash -c "${CMD[@]}" &
-    elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "tmux" ] # serial / xterm mode
+    elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "tmux" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] # serial / xterm mode
     then
         CMD="$CMD -nographic"
         XCMD=$(TERMCMD $HOSTNAME)
