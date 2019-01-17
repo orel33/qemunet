@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#### QEMUNET Release 1.0 (2016-09-13) ####
+#### QEMUNET Release 1.0 (2018-01) ####
 
 # QemuNet: A light shell script based on QEMU Virtual Machine and
 # VDE Virtual Switch to enable easy Virtual Networking.
@@ -19,16 +19,6 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-### QEMUNET RUNTIME COMMAND ###
-
-QEMU="qemu-system-x86_64"
-QEMUIMG="qemu-img"
-VDESWITCH="vde_switch"
-SOCAT="socat"
-WGET="wget"
-TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # a trailing semicolon is required!
-# TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" ; }
 
 ### QEMUNET CONFIG ###
 
@@ -53,16 +43,92 @@ MODE=""  # "SESSION" or "STANDALONE"
 # default options
 INTERNET=0
 NOKVM=0
-MONITOR=0
+SOCKET=0
 RAW=0
 MOUNT=1
 XTERM=0
 USEVLAN=0
 RMQCOW2=0
-SWITCHXTERM=0
+SWITCHTERM=0
+QEMUDISPLAY="graphic" # xterm or rxvt or tmux or graphic or socket
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
+
+### QEMUNET RUNTIME COMMAND ###
+
+QEMU="qemu-system-x86_64"
+QEMUIMG="qemu-img"
+VDESWITCH="vde_switch"
+SOCAT="socat"
+WGET="wget"
+
+TERMCMD () {
+    if [ "$QEMUDISPLAY" = "xterm" ] ; then
+        echo "xterm -fg white -bg black -T $1 -e" ;
+    elif [ "$QEMUDISPLAY" = "rxvt" ] ; then
+        echo "rxvt -bg Black -fg White -title $1 -e bash -c" ;
+    elif [ "$QEMUDISPLAY" = "gnome" ] ; then
+        echo "gnome-terminal -- bash -c" ;
+    elif [ "$QEMUDISPLAY" = "xfce4" ] ; then
+        echo "xfce4-terminal -T $1 -x bash -c" ;
+    elif [ "$QEMUDISPLAY" = "tmux" ] ; then
+        echo "tmux new-window -t $TMUXID -n $1" ; # windows
+        # echo "tmux split-window -t $TMUXID" ; # panes
+    else
+        echo "ERROR:Invalid display mode!"
+    fi
+}
+
+# TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # $1:title, $2:cmd $...: args
+# TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" ; }
+# TERMCMD () { echo "tmux new-window -t $TMUXID -n $1" ; } # windows
+# TERMCMD () { echo "tmux split-window -t $TMUXID" ; }   # panes
+
+### TMUX ###
+
+# TMUXID="$SESSIONID"
+TMUXID="qemunet"
+
+TMUX_START() {
+    tmux start-server
+    tmux new-session -d -s $TMUXID -n console bash # tmux console
+    tmux set-option -t $TMUXID -g default-shell /bin/bash
+    tmux set-option -t $TMUXID -g mouse on # enable to select panes/windows  with mouse (howewer, hold shift key, to copy/paste with mouse)
+    # tmux set-option -g prefix C-b
+    tmux bind-key C-c kill-session  # press "C-b C-c" to kill session!
+    tmux set-window-option -g window-status-current-bg red
+    tmux set-window-option -g aggressive-resize on
+    # tmux set-option -g allow-rename off
+    tmux set-option -g status-left ''
+    tmux set-option -g status-right '#[fg=colour233,bg=colour241,bold] %d/%m/%Y #[fg=colour233,bg=colour245,bold] %H:%M:%S '
+    tmux bind P select-window -t :0 \\\; send-keys "$QEMUNETDIR/tmux-panes.sh" Enter \\\; select-window -t :1   # one single window with multiple panes
+    tmux bind W select-window -t :0 \\\; send-keys "$QEMUNETDIR/tmux-windows.sh" Enter \\\; select-window -t :1 # multiple windows
+}
+
+TMUX_ATTACH() {
+    TMUXPIDS=$(tmux list-panes -s -t $TMUXID  -F "#{pane_pid}") # wait cannot be used, for TMUX processes are not children of this bash script!
+    TMUXTTY=$(tmux list-panes -t $TMUXID:0 -F "#{pane_tty}")
+    echo > $TMUXTTY
+    cat $QEMUNETDIR/logo.txt > $TMUXTTY
+    echo > $TMUXTTY
+    echo "***********************************************" > $TMUXTTY
+    echo "TMUX session name: $TMUXID" > $TMUXTTY
+    echo "Press \"C-b C-c\" to kill the TMUX session." > $TMUXTTY
+    echo "Hold shift key, to copy/paste with mouse middle-button." > $TMUXTTY
+    echo "***********************************************" > $TMUXTTY
+    echo > $TMUXTTY
+    echo > $TMUXTTY
+    # TMUX_JOIN
+    # TMUX_SPLIT
+    tmux select-window -t $TMUXID:0  # select console (window index 0)
+    tmux attach-session -t $TMUXID   # tmux in foreground
+}
+
+
+TMUX_EXIT() {
+    tmux kill-session -t $TMUXID &> /dev/null
+}
 
 ### LOGO ###
 
@@ -73,7 +139,6 @@ LOGO() {
 ### USAGE ###
 
 USAGE() {
-    LOGO
     echo "A light shell script based on QEMU Virtual Machine (VM) and VDE Virtual Switch to enable easy Virtual Networking."
     echo
     echo "Start/restore a session:"
@@ -88,14 +153,24 @@ USAGE() {
     echo "Advanced Options:"
     echo "    -a <images.tgz>: load a qcow2 image archive for all VMs"
     echo "    -c <config>: load system config file (default is qemunet.cfg)"
-    echo "    -x: launch VM in xterm terminal instead of SDL native window (only for linux system)"
-    echo "    -y: launch VDE switch management console in xterm terminal"
+    echo "    -x: launch VM in xterm terminal (only for linux system running on ttyS0)"
+    echo "    -d <display>: launch VM with special display mode: "
+    echo "       * graphic: standard qemu dislay mode (default mode)"
+    echo "       * xterm: qemu serial/text mode running within xterm (same as -x option)"
+    echo "       * rxvt: same as xterm mode, but rxvt command instead"
+    echo "       * gnome: qemu serial/text mode running within gnome-terminal"
+    echo "       * xfce4: qemu serial/text mode running within xfce4-terminal"
+    echo "       * tmux: qemu serial/text mode running within a tmux session (experimental)"
+    echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
+    # graphic xterm or rxvt or tmux or  or socket)
+    # echo "    -z: launch VM in tmux terminal (only for linux system running on ttyS0)"
+    # echo "    -r: redirect VM console & monitor display to Unix socket (only for linux system running on ttyS0)"
+    echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable Slirp interface for Internet access (ping not allowed)"
     echo "    -m: mount shared directory in /mnt/host (default for linux system)"
     echo "    -q: ignore and remove qcow2 images for the running session"
     echo "    -M: disable mount"
     echo "    -v: enable VLAN support"
-    echo "    -d: enable QEMU monitor (for debug purpose)"    
     echo "    -k: enable KVM full virtualization support (default)"
     echo "    -K: disable KVM full virtualization support (not recommanded)"
     echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
@@ -104,26 +179,26 @@ USAGE() {
 
 ### PARSE ARGUMENTS ###
 
-while getopts "t:a:s:S:c:l:imMkKxyqvdh" OPT; do
+while getopts "t:a:s:S:c:l:imMkKxyqvd:h" OPT; do
     case $OPT in
         t)
             if [ -n "$MODE" ] ; then USAGE ; fi
             MODE="SESSION"
             TOPOLOGY="$OPTARG"
-            ;;
+        ;;
         s)
             if [ -n "$MODE" ] ; then USAGE ; fi
             MODE="SESSION"
             SESSIONARCHIVE="$OPTARG"
-            ;;
+        ;;
         S)
             if [ -n "$MODE" ] ; then USAGE ; fi
             MODE="SESSION"
             SESSIONDIR="$OPTARG"
-            ;;
+        ;;
         a)
             IMGARCHIVE="$OPTARG"
-            ;;
+        ;;
         l)
             if [ -n "$MODE" ] ; then USAGE ; fi
             MODE="STANDALONE"
@@ -133,47 +208,50 @@ while getopts "t:a:s:S:c:l:imMkKxyqvdh" OPT; do
             mkdir -p $SESSIONDIR
             THESYSNAME="$OPTARG"
             THEHOSTNAME="$OPTARG"
-            ;;
+        ;;
         c)
             QEMUNETCFG="$OPTARG"
-            ;;
+        ;;
         i)
             INTERNET=1
-            ;;
+        ;;
         m)
             MOUNT=1
-            ;;
+        ;;
         M)
             MOUNT=0
-            ;;
+        ;;
+        d)
+            QEMUDISPLAY="$OPTARG" # check $DISPLAY MODE
+        ;;
         x)
-            XTERM=1
-            ;;
+            QEMUDISPLAY="xterm"
+        ;;
         y)
-            SWITCHXTERM=1
-            ;;
+            SWITCHTERM=1
+        ;;
         k)
             NOKVM=0
-            ;;
+        ;;
         K)
             NOKVM=1
-            ;;
+        ;;
         v)
             USEVLAN=1
-            ;;
-        d)
-            MONITOR=1
-            ;;
+        ;;
+        # r)
+        #     SOCKET=1
+        # ;;
         q)
             RMQCOW2=1
-            ;;
+        ;;
         h)
             USAGE
-            ;;
+        ;;
         \?)
             echo "Invalid option!"
             USAGE
-            ;;
+        ;;
     esac
 done
 
@@ -199,7 +277,8 @@ CHECKRC() {
     if [ "$QEMUMAJOR" -lt "2" ] ; then
         echo "ERROR: QEMU version must be greater than or equal to 2.1!"
         exit
-    elif [ "$QEMUMAJOR" -eq "2" -a "$QEMUMINOR" -lt "1" ] ; then
+    elif [ "$QEMUMAJOR" -eq "2" -a "$QEMUMINOR" -lt "1" ]
+    then
         echo "ERROR: QEMU version must be greater than or equal to 2.1!"
         exit
     fi
@@ -214,10 +293,12 @@ CHECKRC() {
     if ! [ -x "$(type -P $QEMU)" ] ; then
         echo "ERROR: $QEMU not found!"
         exit
-    elif ! [ -x "$(type -P $QEMUIMG)" ] ; then
+    elif ! [ -x "$(type -P $QEMUIMG)" ]
+    then
         echo "ERROR: $QEMUIMG not found!"
         exit
-    elif ! [ -x  "$(type -P $VDESWITCH)" ] ; then
+    elif ! [ -x  "$(type -P $VDESWITCH)" ]
+    then
         echo "ERROR: $VDESWITCH not found!"
         exit
     fi
@@ -238,14 +319,15 @@ CHECKRC() {
 
     # check KVM (test working only on Linux system)
     if [ "$NOKVM" -eq 0 ] ; then
-	# Other solution: lscpu | grep Virtualization
+        # Other solution: lscpu | grep Virtualization
         INTELCPUFLAGS=$(grep -c "vmx" /proc/cpuinfo)
         AMDCPUFLAGS=$(grep -c "svm" /proc/cpuinfo)
         INTELKVMMOD=$(lsmod | grep -c "kvm_intel")
         AMDKVMMOD=$(lsmod | grep -c "kvm_amd")
         if [ "$INTELCPUFLAGS" -ge 1 -a "$INTELKVMMOD" -ge 1 ] ; then
             echo "KVM: enabled (intel)"
-        elif [ "$AMDCPUFLAGS" -ge 1 -a "$AMDKVMMOD" -ge 1 ] ; then
+        elif [ "$AMDCPUFLAGS" -ge 1 -a "$AMDKVMMOD" -ge 1 ]
+        then
             echo "KVM: enabled (amd)"
         else
             echo "ERROR: KVM not available for QEMU!" # TODO also check module permissions!
@@ -283,7 +365,7 @@ INITSESSION() {
     # if ! [ -d "$SESSIONLINK" ] ; then echo "ERROR: Session directory link \"$SESSIONLINK\" does not exist!" ; exit ; fi
     # if ! [ -w "$SESSIONLINK" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONLINK\"!" ; exit ; fi
     ln -T -sf $SESSIONDIR $SESSIONLINK &> /dev/null || echo "WARNING: unable to create session link \"$SESSIONLINK\" in working directory!"
-    
+
     if [ "$MODE" = "SESSION" ] ; then
 
         ### check session input param
@@ -308,15 +390,14 @@ INITSESSION() {
     # lock session
     LOCK="$SESSIONDIR/lock"
     if [ -e "$LOCK" ] ; then echo "ERROR: Session Locked! Try to remove $LOCK file before restarting." ; exit;
-    else touch $LOCK ; fi
+else touch $LOCK ; fi
 
     ### PRINT SESSION
-
     echo "MODE: $MODE"
+    echo "SESSION ID: $SESSIONID"
     echo "SESSION DIRECTORY: $SESSIONDIR"
     echo "SESSION LINK: $SESSIONLINK"
     echo "QEMUNET CFG: $QEMUNETCFG"
-    echo "QEMUNET MODE: $MODE"
     echo "NETWORK TOPOLOGY: $TOPOLOGY"
     echo "IMAGE ARCHIVE: $IMGARCHIVE"
     echo "SESSION ARCHIVE: $SESSIONARCHIVE"
@@ -348,23 +429,23 @@ LOADCONF() {
     for SYSNAME in "${!FS[@]}"; do
         echo "[$SYSNAME]"
         echo "* SYS = ${SYS[$SYSNAME]}"
-        echo "* QEMU OPT = ${QEMUOPT[$SYSNAME]}"	
+        echo "* QEMU OPT = ${QEMUOPT[$SYSNAME]}"
 
         HOSTFS="${FS[$SYSNAME]}"
-	HOSTKERNEL="${KERNEL[$SYSNAME]}"
-        HOSTINITRD="${INITRD[$SYSNAME]}"		
-	HOSTURL="${URL[$SYSNAME]}"
+        HOSTKERNEL="${KERNEL[$SYSNAME]}"
+        HOSTINITRD="${INITRD[$SYSNAME]}"
+        HOSTURL="${URL[$SYSNAME]}"
 
-	OKFS="⚠"
-	OKKERNEL="⚠"
-	OKINITRD="⚠"
+        OKFS="⚠"
+        OKKERNEL="⚠"
+        OKINITRD="⚠"
         if [ -r "$HOSTFS" ] ; then OKFS="✓" ; fi
         if [ -r "$HOSTKERNEL" ] ; then OKKERNEL="✓" ; fi
-        if [ -r "$HOSTINITRD" ] ; then OKINITRD="✓" ; fi 	
+        if [ -r "$HOSTINITRD" ] ; then OKINITRD="✓" ; fi
 
-	echo "* FS = $HOSTFS $OKFS"
-        if [ ${KERNEL[$SYSNAME]+_} ]; then echo "* KERNEL = $HOSTKERNEL $OKKERNEL" ; fi  
-        if [ ${INITRD[$SYSNAME]+_} ]; then echo "* INITRD = $HOSTINITRD $OKINITRD" ; fi  
+        echo "* FS = $HOSTFS $OKFS"
+        if [ ${KERNEL[$SYSNAME]+_} ]; then echo "* KERNEL = $HOSTKERNEL $OKKERNEL" ; fi
+        if [ ${INITRD[$SYSNAME]+_} ]; then echo "* INITRD = $HOSTINITRD $OKINITRD" ; fi
         if [ ${URL[$SYSNAME]+_} ]; then echo "* URL = $HOSTURL" ; fi
 
         HOSTFSDIR=$(dirname  $HOSTFS)
@@ -384,15 +465,15 @@ LOADCONF() {
 DOWNLOAD() {
 
     SYSNAME=$1
-    
+
     HOSTFS="${FS[$SYSNAME]}"
     HOSTFSDIR=$(dirname  $HOSTFS)
     HOSTFSTGZ="$HOSTFSDIR/$SYSNAME.tgz"
     HOSTURL=${URL[$SYSNAME]}
-    
+
     # FS OK
     if [ -r "$HOSTFS" ] ; then return; fi
-    
+
     # Download disk image
     if [ ${URL[$SYSNAME]+_} ] ; then
         # if [ ! -r "$HOSTFSTGZ" ] ; then
@@ -400,10 +481,10 @@ DOWNLOAD() {
         $WGET --continue --show-progress -q -nc $HOSTURL -O $HOSTFSTGZ
         #fi
     else
-	echo "ERROR: Raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system and no URL provided to download it!"
-	EXIT 
+        echo "ERROR: Raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system and no URL provided to download it!"
+        EXIT
     fi
-    
+
     # Uncompress disk image
     if [ -r "$HOSTFSTGZ" -a ! -r "$HOSTFS" ] ; then
         echo "=> Extracting disk image from archive for system $SYSNAME. Please, be patient..."
@@ -420,7 +501,7 @@ CREATEQCOW() {
     IMGCMD=""
     if [ "$RMQCOW2" -eq 1 ] ; then rm -f "$HOSTQCOW" ; fi
     if ! [ -r "$HOSTQCOW" ] ; then IMGCMD="$QEMUIMG create -q -b $HOSTFS -f qcow2 $HOSTQCOW" ;
-    else IMGCMD="$QEMUIMG rebase -q -u -b $HOSTFS $HOSTQCOW" ; fi
+else IMGCMD="$QEMUIMG rebase -q -u -b $HOSTFS $HOSTQCOW" ; fi
     echo "[$(basename $HOSTQCOW)] $IMGCMD"
     $IMGCMD
 }
@@ -452,7 +533,7 @@ SWITCH() {
         SWPORTNUMTRUNK[$SWITCHNAME]=20
     fi
     # launch VDE switch management console in xterm terminal
-    if [ "$SWITCHXTERM" -eq 1 ] ; then
+    if [ "$SWITCHTERM" -eq 1 ] ; then
         CMD=$(TERMCMD $SWITCHNAME)
         CMD="${CMD} vdeterm $SWITCHMGMT"
         echo "[$SWITCHNAME] $CMD"
@@ -495,7 +576,7 @@ NETWORK() {
         SWITCHMGMT="$SESSIONDIR/$SWITCHNAME.mgmt"
         SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
         SWITCHLOG="$SESSIONDIR/$SWITCHNAME.log"
-        SWITCHCMD="$SESSIONDIR/$SWITCHNAME.cmd"	
+        SWITCHCMD="$SESSIONDIR/$SWITCHNAME.cmd"
         ID="$SWITCHNAME"
         # MAC=$(hexdump -n3 -e'/3 "AA:AA:AA" 3/1 ":%02X"' /dev/urandom)
         MAC=$(printf "AA:AA:AA:AA:%02x:%02x" $HOSTNUM $IFACENUM)
@@ -503,18 +584,18 @@ NETWORK() {
         PORTNUM=${SWPORTNUM[$SWITCHNAME]}
         NETOPT="$NETOPT -netdev vde,sock=$SWITCHDIR,port=$PORTNUM,id=$ID -device $NETDEV,netdev=$ID,mac=$MAC"
         # echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM (vlan $VLAN)"
-	echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM"	
-	# VLAN management (http://wiki.virtualsquare.org/wiki/index.php/VDE)
+        echo "=> plug $HOSTNAME:eth$IFACENUM to switch $SWITCHNAME:$PORTNUM"
+        # VLAN management (http://wiki.virtualsquare.org/wiki/index.php/VDE)
         if [ "$USEVLAN" -eq 1 ] ; then
             echo "port/setnumports $SWMAXNUMPORTS" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null   # set max num ports (TODO: only the first time)
             echo "port/create $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null              # create switch port
             # echo "vlan/create $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null               # create new VLAN (TODO: create only the first time)
             # echo "port/setvlan $PORTNUM $VLAN" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null     # set port to vlan (as untagged)
             ## echo "vlan/addport $VLAN $PORTNUM" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null    # set port to vlan (as tagged)
-	    if [ -r $SWITCHCMD ] ; then		
-		echo "load $SWITCHCMD" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null               # load switch configuration
-		echo "=> load switch configuration \"$SWITCHCMD\""
-	    fi
+            if [ -r $SWITCHCMD ] ; then
+                echo "load $SWITCHCMD" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &> /dev/null               # load switch configuration
+                echo "=> load switch configuration \"$SWITCHCMD\""
+            fi
         fi
         # print switch log for debug
         echo "vlan/allprint" | $SOCAT - "UNIX-CONNECT:$SWITCHMGMT" &>> $SWITCHLOG                     # print log
@@ -549,7 +630,7 @@ HOST() {
     if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory $SESSIONDIR does not exist!" ; EXIT ; fi
 
     # basic options
-    CMD="$QEMU -name $HOSTNAME"
+    CMD="$QEMU -name $HOSTNAME -rtc base=localtime"
 
     # kvm option (by default)
     if [ "$NOKVM" -eq 0 ] ; then CMD="$CMD -enable-kvm" ; fi
@@ -564,7 +645,7 @@ HOST() {
     # use raw or qcow2 system image
     if [ "$RAW" -eq 1 ] ; then
         # CMD="$CMD -hda $HOSTFS"   # use raw image file
-	CMD="$CMD -drive format=raw,file=$HOSTFS"
+        CMD="$CMD -drive format=raw,file=$HOSTFS"
     else
         # ln -sf $HOSTFS $SESSIONDIR/$HOSTNAME.img
         # create qcow2 if needed
@@ -573,11 +654,6 @@ HOST() {
         CMD="$CMD -hda $HOSTQCOW" # using qcow2 image file (raw not modified)
     fi
 
-    #create socket for qemu monitor for host with path $SESSIONDIR/$HOSTNAME.monitor
-    if [ "$MONITOR" -eq 1 ] ; then
-	CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"   # bug: with this option, ctrl-c (SIGINT) will kill qemu session!?!
-    fi
-    
     # share directory /mnt/host (linux only)
     if [ "$HOSTSYS" = "linux" -a "$MOUNT" -eq 1 ] ; then
         SHAREDIR="$SESSIONDIR/$HOSTNAME"
@@ -599,32 +675,51 @@ HOST() {
     if [ "$INTERNET" -eq 1 ] ; then CMD="$CMD -netdev user,id=mynet0 -device $NETDEV,netdev=mynet0" ; fi
 
     CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
-    
-    # xterm (linux only)
-    if [ "$HOSTSYS" = "linux" -a "$XTERM" -eq 1 -a -r "$HOSTKERNEL" -a -r "$HOSTINITRD" ] ; then
-        # if ! [ -r "$HOSTKERNEL" -a  -r "$HOSTINITRD" ] ; then
-        #    echo "ERROR: Linux kernel or initrd file is missing. Dont use -x option." ; EXIT ;
-        # fi
+
+    # load external linux kernel (if available)
+    if [ "$HOSTSYS" = "linux" -a -r "$HOSTKERNEL" -a -r "$HOSTINITRD" ] ; then
         # append kernel args
-        KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0"
+        KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0" # both tty0 and ttyS0 are useful
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
-        CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\" -nographic"
-        export CMD
-	echo $CMD > $CMDFILE && chmod +x $CMDFILE
+        CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
+    fi
+
+    ### launch qemu command with different display mode (socket, xterm, graphic)
+
+    if [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
+        # bug: with this option, any ctrl-c (SIGINT) in VM will kill all qemu session!
+        # solution: use socat in raw mode with escape option!
+        CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"
+        # redirect both qemu monitor & console in two Unix sockets, that can be connected with socat
+        # $ socat stdin,raw,echo=0 unix-connect:session/<hostname>.sock
+        CMD="$CMD -serial unix:$SESSIONDIR/$HOSTNAME.sock,server" # wait client connection, else use "nowait" option
+        # CMD="$CMD -nographic"
+        CMD="$CMD -display none"
+        echo "[$HOSTNAME] $CMD"
+        # export CMD
+        # bash -c 'eval $CMD' &
+        bash -c "${CMD[@]}" &
+    elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "tmux" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] # serial / xterm mode
+    then
+        CMD="$CMD -nographic"
         XCMD=$(TERMCMD $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
-        $XCMD bash -c 'eval $CMD' &
-    else
-        echo "[$HOSTNAME] $CMD"
-	echo $CMD > $CMDFILE && chmod +x $CMDFILE
-        $CMD &
-        # CMD="$CMD -nographic"
+        # echo $CMD > $CMDFILE && chmod +x $CMDFILE
         # export CMD
         # $XCMD bash -c 'eval $CMD' &
+        # $XCMD bash -c 'eval $CMD' &
+        $XCMD "${CMD[@]}" &
+    else # standard / graphic mode
+        echo "[$HOSTNAME] $CMD"
+        # echo $CMD > $CMDFILE && chmod +x $CMDFILE
+        # export CMD
+        # bash -c 'eval $CMD' &
+        bash -c "${CMD[@]}" &
     fi
 
     PID=$!
 
+    # echo "[$HOSTNAME] pid $PID"
     # next
     HOSTPIDS="$HOSTPIDS $PID"
     HOSTNUM=$(expr $HOSTNUM + 1)
@@ -659,6 +754,7 @@ TRUNK(){
 ### WAIT ###
 
 WAIT() {
+    echo "wait pids: $HOSTPIDS"
     wait $HOSTPIDS  # only wait hosts (not switch, etc)
 }
 
@@ -669,7 +765,7 @@ ONEXIT=0
 EXIT() {
     if [ $ONEXIT -eq 0 ] ; then
         ONEXIT=1
-        echo "=> Killing all virtual hosts and switches" 
+        echo "=> Killing all virtual hosts and switches"
         # killing all
         ALLPIDS=$(jobs -rp)  # get all jobs launched by this script
         disown $ALLPIDS 2> /dev/null     # now, I don't care from all these background processes... so no error messages are printed by bash
@@ -680,7 +776,8 @@ EXIT() {
         # clean session files
         if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
         rm -f $SESSIONDIR/*.pid $SESSIONDIR/*.mgmt $SESSIONDIR/*.log
-        rm -f $LOCK
+        rm -f $LOCK	    
+        if [ "$QEMUDISPLAY" = "tmux" ] ; then TMUX_EXIT ; fi
         exit
     fi
 }
@@ -698,36 +795,37 @@ trap 'EXIT' INT EXIT TERM
 ### START ###
 
 START() {
+    if [ "$QEMUDISPLAY" = "tmux" ] ; then TMUX_START ; fi
     echo "********** Let's Rock **********"
     CHECKRC
     echo "********** Loading VM Config **********"
     LOADCONF
     echo "********** Init Session **********"
     INITSESSION
-    ###
-    if [ "$MODE" = "STANDALONE" ] ; then
-        echo "********** Starting Standalone Session **********"
-        HOST $THESYSNAME $THEHOSTNAME
-        # echo "=> Don't forget to launch the DHCP client in QEMU if you want to connect Internet using the Slirp interface."
-    else
-        echo "********** Starting Session with Given Topology **********"
-        source $TOPOLOGY
-    fi
+    echo "********** Starting Session with Given Topology **********"
+    source $TOPOLOGY
     echo "********** Waiting end of Session **********"
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
-    if [ "$MONITOR" -eq 1 ] ; then
-	echo "=> To access the QEMU monitor of host, please use the command: rlwrap socat - UNIX-CONNECT:$SESSIONDIR/<host>.monitor"
+    if [ "$QEMUDISPLAY" = "socket" ] ; then
+        echo "=> To access the QEMU console of each VM, please use the command:"
+        echo "     $ ./connect.sh <session_dir> <vm_hostname>"
     fi
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
-    echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""    
-    WAIT
-    END
+    echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
+    if [ "$QEMUDISPLAY" = "tmux" ] ; then
+        TMUX_ATTACH
+    else 
+        WAIT
+        END
+    fi
     # trap call EXIT at regular exit!
 }
 
 ### LET's ROCK ###
 
+LOGO
+GETARGS $*
 START
 
 # EOF
