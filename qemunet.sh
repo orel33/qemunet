@@ -659,8 +659,8 @@ HOST() {
         SHAREDIR="$SESSIONDIR/$HOSTNAME"
         mkdir -p $SHAREDIR
         # SECURITY="mapped" # files are created with Qemu user credentials and the client-user's credentials are saved in extended attributes.
-        # SECURITY="none"   # files are directly created with client-user's credentials.
-        SECURITY="mapped"   # bug: problem if session directory is on NFS, use /tmp.
+        SECURITY="none"   # files are directly created with client-user's credentials.
+        # SECURITY="mapped"   # bug: problem if session directory is on NFS, use /tmp.
         CMD="$CMD -fsdev local,id=share0,path=$SHAREDIR,security_model=$SECURITY -device virtio-9p-pci,fsdev=share0,mount_tag=host"
     fi
 
