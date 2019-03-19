@@ -1,5 +1,5 @@
 #!/bin/bash -x
-IMGDIR="/home/orel/Documents/Virt/qemunet/qemunet/images"
+IMGDIR="$PWD/images"
 IMG="$IMGDIR/debian10.img"
 KERNEL="$IMGDIR/debian10.vmlinuz"
 INITRD="$IMGDIR/debian10.initrd"
