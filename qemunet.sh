@@ -34,7 +34,6 @@ SESSIONLINK="session" # session link to session directory
 TOPOLOGY=""
 IMGARCHIVE=""
 SESSIONARCHIVE=""
-THEHOSTNAME=""
 THESYSNAME=""
 
 # mode
@@ -179,84 +178,85 @@ USAGE() {
 
 ### PARSE ARGUMENTS ###
 
-while getopts "t:a:s:S:c:l:imMkKxyqvd:h" OPT; do
-    case $OPT in
-        t)
-            if [ -n "$MODE" ] ; then USAGE ; fi
-            MODE="SESSION"
-            TOPOLOGY="$OPTARG"
-        ;;
-        s)
-            if [ -n "$MODE" ] ; then USAGE ; fi
-            MODE="SESSION"
-            SESSIONARCHIVE="$OPTARG"
-        ;;
-        S)
-            if [ -n "$MODE" ] ; then USAGE ; fi
-            MODE="SESSION"
-            SESSIONDIR="$OPTARG"
-        ;;
-        a)
-            IMGARCHIVE="$OPTARG"
-        ;;
-        l)
-            if [ -n "$MODE" ] ; then USAGE ; fi
-            MODE="STANDALONE"
-            RAW=1
-            INTERNET=1
-            SESSIONDIR="/tmp/$SESSIONID"
-            mkdir -p $SESSIONDIR
-            THESYSNAME="$OPTARG"
-            THEHOSTNAME="$OPTARG"
-        ;;
-        c)
-            QEMUNETCFG="$OPTARG"
-        ;;
-        i)
-            INTERNET=1
-        ;;
-        m)
-            MOUNT=1
-        ;;
-        M)
-            MOUNT=0
-        ;;
-        d)
-            QEMUDISPLAY="$OPTARG" # check $DISPLAY MODE
-        ;;
-        x)
-            QEMUDISPLAY="xterm"
-        ;;
-        y)
-            SWITCHTERM=1
-        ;;
-        k)
-            NOKVM=0
-        ;;
-        K)
-            NOKVM=1
-        ;;
-        v)
-            USEVLAN=1
-        ;;
-        # r)
-        #     SOCKET=1
-        # ;;
-        q)
-            RMQCOW2=1
-        ;;
-        h)
-            USAGE
-        ;;
-        \?)
-            echo "Invalid option!"
-            USAGE
-        ;;
-    esac
-done
+GETARGS() {
+    while getopts "t:a:s:S:c:l:imMkKxyqvd:h" OPT; do
+        case $OPT in
+            t)
+                if [ -n "$MODE" ] ; then USAGE ; fi
+                MODE="SESSION"
+                TOPOLOGY="$OPTARG"
+            ;;
+            s)
+                if [ -n "$MODE" ] ; then USAGE ; fi
+                MODE="SESSION"
+                SESSIONARCHIVE="$OPTARG"
+            ;;
+            S)
+                if [ -n "$MODE" ] ; then USAGE ; fi
+                MODE="SESSION"
+                SESSIONDIR="$OPTARG"
+            ;;
+            a)
+                IMGARCHIVE="$OPTARG"
+            ;;
+            l)
+                if [ -n "$MODE" ] ; then USAGE ; fi
+                MODE="STANDALONE"
+                RAW=1
+                INTERNET=1
+                SESSIONDIR="/tmp/$SESSIONID"
+                mkdir -p $SESSIONDIR
+                THESYSNAME="$OPTARG"
+            ;;
+            c)
+                QEMUNETCFG="$OPTARG"
+            ;;
+            i)
+                INTERNET=1
+            ;;
+            m)
+                MOUNT=1
+            ;;
+            M)
+                MOUNT=0
+            ;;
+            d)
+                QEMUDISPLAY="$OPTARG" # check $DISPLAY MODE
+            ;;
+            x)
+                QEMUDISPLAY="xterm"
+            ;;
+            y)
+                SWITCHTERM=1
+            ;;
+            k)
+                NOKVM=0
+            ;;
+            K)
+                NOKVM=1
+            ;;
+            v)
+                USEVLAN=1
+            ;;
+            # r)
+            #     SOCKET=1
+            # ;;
+            q)
+                RMQCOW2=1
+            ;;
+            h)
+                USAGE
+            ;;
+            \?)
+                echo "Invalid option!"
+                USAGE
+            ;;
+        esac
+    done
 
-if [ $# -eq 0 ] ; then USAGE ; fi
-if [ -z "$MODE" ] ; then USAGE ; fi
+    if [ $# -eq 0 ] ; then USAGE ; fi
+    if [ -z "$MODE" ] ; then USAGE ; fi
+}
 
 ### 1) CHECK RC ###
 
@@ -803,7 +803,11 @@ START() {
     echo "********** Init Session **********"
     INITSESSION
     echo "********** Starting Session with Given Topology **********"
-    source $TOPOLOGY
+    if [ "$MODE" = "SESSION" ] ; then
+        source $TOPOLOGY
+    else
+        HOST "$THESYSNAME" "$THESYSNAME"
+    fi
     echo "********** Waiting end of Session **********"
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
