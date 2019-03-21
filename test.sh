@@ -45,9 +45,8 @@ DISPLAY="-nographic"   # ok (no graphic display + redirect on stdio)
 
 ### SHARE ####
 
-# SHARE="-fsdev local,id=share0,path=$SESSIONDIR,security_model=mapped -device virtio-9p-pci,fsdev=share0,mount_tag=host"
-mkdir -p $SESSIONDIR/share
-SHARE="-virtfs local,path=$SESSIONDIR/share,mount_tag=host0,security_model=passthrough,id=host0"
+SHARE="-fsdev local,id=share0,path=$SESSIONDIR,security_model=mapped -device virtio-9p-pci,fsdev=share0,mount_tag=host"
+# mount -t 9p -o trans=virtio host /mnt/host
 
 ### BOOT ###
 #BOOTARG="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0"
