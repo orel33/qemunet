@@ -3,8 +3,8 @@ IMGDIR="$PWD/images"
 IMG="$IMGDIR/debian10.img"
 KERNEL="$IMGDIR/debian10.vmlinuz"
 INITRD="$IMGDIR/debian10.initrd"
-# SESSIONDIR="/tmp/qemu-test"
-SESSIONDIR=$(mktemp -u -d /tmp/qemu-test-XXXXXX)
+SESSIONDIR="/tmp/qemu-test"
+# SESSIONDIR=$(mktemp -u -d /tmp/qemu-test-XXXXXX)
 mkdir -p $SESSIONDIR
 ln -T -sf $SESSIONDIR session
 
@@ -45,7 +45,7 @@ DISPLAY="-nographic"   # ok (no graphic display + redirect on stdio)
 
 ### SHARE ####
 
-SHARE="-fsdev local,id=share0,path=$SESSIONDIR,security_model=mapped -device virtio-9p-pci,fsdev=share0,mount_tag=host"
+# SHARE="-fsdev local,id=share0,path=$SESSIONDIR,security_model=mapped -device virtio-9p-pci,fsdev=share0,mount_tag=host"
 # mount -t 9p -o trans=virtio host /mnt/host
 
 ### BOOT ###
@@ -55,29 +55,11 @@ BOOT="-kernel $KERNEL -initrd $INITRD -append \"root=/dev/sda1 rw net.ifnames=0 
 
 ####################### RUN QEMU #######################
 
-qemu-img create -q -b $IMG -f qcow2 $SESSIONDIR/my.qcow2 # create qcow image based on raw image
+# create qcow image based on raw image, else use qcow2 if available
+[ ! -f "$SESSIONDIR/my.qcow2" ] && qemu-img create -q -b $IMG -f qcow2 $SESSIONDIR/my.qcow2 
 
-CMD="qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY" # too long variable?
+CMD="qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY"
 
-# solution 0 (fail because double-quote expansion in -append option)
-# $CMD
-
-# solution 1
-# bash -c "$CMD"
-
-# solution 2
-# export CMD
-# bash -c 'eval $CMD' # my trick
-
-# solution 3
-# eval "$CMD"
-
-# solution 4
 bash -c "echo $CMD ; ${CMD[@]}"
-
-# For Qemu command in background (&)
-# PID=$!
-# echo "qemu pid: $PID"
-# wait $PID
 
 # EOF
