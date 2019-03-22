@@ -22,7 +22,7 @@ Then, you will get 4 root consoles on Linux/Debian virtual hosts (in text mode):
 First of all, the QemuNet script is written in *Bash* version greater than or equal to 4. Then, you can install all the QemuNet dependencies in a Debian-like OS, as follow:
 
 ```bash
-sudo apt-get install qemu qemu-kvm vde2 libattr1 libvirt0 socat rlwrap wget virt-manager
+sudo apt-get install qemu qemu-kvm vde2 libattr1 libvirt0 socat rlwrap wget virt-manager libguestfs-tools libvirt-clients
 ```
 
 In practice, *QemuNet* requires QEMU (qemu-system-x86_64) with VDE and KVM supports enabled and with a *version greater than or equal to 2.1*!!! Check it:
