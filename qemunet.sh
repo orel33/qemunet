@@ -66,24 +66,16 @@ WGET="wget"
 TERMCMD () {
     if [ "$QEMUDISPLAY" = "xterm" ] ; then
         echo "xterm -fg white -bg black -T $1 -e" ;
-        elif [ "$QEMUDISPLAY" = "rxvt" ] ; then
+    elif [ "$QEMUDISPLAY" = "rxvt" ] ; then
         echo "rxvt -bg Black -fg White -title $1 -e bash -c" ;
-        elif [ "$QEMUDISPLAY" = "gnome" ] ; then
+    elif [ "$QEMUDISPLAY" = "gnome" ] ; then
         echo "gnome-terminal -- bash -c" ;
-        elif [ "$QEMUDISPLAY" = "xfce4" ] ; then
+    elif [ "$QEMUDISPLAY" = "xfce4" ] ; then
         echo "xfce4-terminal -T $1 -x bash -c" ;
-        elif [ "$QEMUDISPLAY" = "tmux" ] ; then
-        echo "tmux new-window -t $TMUXID -n $1" ; # windows
-        # echo "tmux split-window -t $TMUXID" ; # panes
     else
         echo "ERROR:Invalid display mode!"
     fi
 }
-
-# TERMCMD () { echo "rxvt -bg Black -fg White -title $1 -e" ; } # $1:title, $2:cmd $...: args
-# TERMCMD () { echo "xterm -fg white -bg black -T $1 -e" ; }
-# TERMCMD () { echo "tmux new-window -t $TMUXID -n $1" ; } # windows
-# TERMCMD () { echo "tmux split-window -t $TMUXID" ; }   # panes
 
 ### TMUX ###
 
@@ -162,6 +154,7 @@ USAGE() {
     echo "       * gnome: qemu serial/text mode running within gnome-terminal"
     echo "       * xfce4: qemu serial/text mode running within xfce4-terminal"
     echo "       * tmux: qemu serial/text mode running within a tmux session (experimental)"
+    echo "       * screen: qemu serial/text mode running within a screen session (experimental)"
     echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable Slirp interface for Internet access (ping not allowed)"
@@ -717,23 +710,29 @@ HOST() {
         # CMD="$CMD -nographic"
         CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
-        # export CMD
-        # bash -c 'eval $CMD' &
         bash -c "${CMD[@]}" &
-    elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "tmux" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then # serial / xterm mode
+    elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
+        CMD="$CMD -nographic"
+        # CMD="$CMD -display none"
+        echo "[$HOSTNAME] $CMD"
+        screen -S "qemunet:$HOSTNAME" -d -m bash -c "${CMD[@]}" # detached
+        # tmux new-session -d -s $SESSIONID -n $HOSTNAME bash -c "${CMD[@]}" # detached
+    # tmux
+    elif [ "$QEMUDISPLAY" = "tmux" ] ; then
+        CMD="$CMD -nographic"
+        # echo "tmux new-window -t $TMUXID -n $1" ; # windows
+        # echo "tmux split-window -t $TMUXID" ; # panes
+        # XCMD=$(TERMCMD $HOSTNAME)
+        echo "[$HOSTNAME] $CMD"
+        tmux new-window -t $TMUXID -n bash -c "${CMD[@]}" # detached
+    # xterm
+    elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then 
         CMD="$CMD -nographic"
         XCMD=$(TERMCMD $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
-        # echo $CMD > $CMDFILE && chmod +x $CMDFILE
-        # export CMD
-        # $XCMD bash -c 'eval $CMD' &
-        # $XCMD bash -c 'eval $CMD' &
         $XCMD "${CMD[@]}" &
     else # standard / graphic mode
         echo "[$HOSTNAME] $CMD"
-        # echo $CMD > $CMDFILE && chmod +x $CMDFILE
-        # export CMD
-        # bash -c 'eval $CMD' &
         bash -c "${CMD[@]}" &
     fi
     
@@ -776,6 +775,8 @@ TRUNK(){
 WAIT() {
     echo "wait pids: $HOSTPIDS"
     wait $HOSTPIDS  # only wait hosts (not switch, etc)
+    # screen -ls
+    sleep 900
 }
 
 ### EXIT ###
@@ -838,7 +839,8 @@ START() {
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     if [ "$QEMUDISPLAY" = "tmux" ] ; then
-        TMUX_ATTACH
+        # TMUX_ATTACH
+        sleep 900
     else
         WAIT
         END

@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 IMGDIR="$PWD/images"
 IMG="$IMGDIR/debian10.img"
 KERNEL="$IMGDIR/debian10.vmlinuz"
@@ -19,6 +19,7 @@ BASIC="-name test -rtc base=localtime -enable-kvm -m 512 -hda $SESSIONDIR/my.qco
 
 ### DISPLAY ###
 
+# DISPLAY="-display none"
 # DISPLAY="-curses"    # buggy?
 # DISPLAY="-display none"
 # DISPLAY="-display gtk" # gtk initialization failed
@@ -49,8 +50,7 @@ DISPLAY="-nographic"   # ok (no graphic display + redirect on stdio)
 # mount -t 9p -o trans=virtio host /mnt/host
 
 ### BOOT ###
-#BOOTARG="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0"
-# BOOT="-kernel $KERNEL -initrd $INITRD -append \"$BOOTARG\""
+# BOOT="-kernel $KERNEL -initrd $INITRD"
 BOOT="-kernel $KERNEL -initrd $INITRD -append \"root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0\""
 
 ####################### RUN QEMU #######################
