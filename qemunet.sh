@@ -773,10 +773,11 @@ TRUNK(){
 ### WAIT ###
 
 WAIT() {
-    echo "wait pids: $HOSTPIDS"
-    wait $HOSTPIDS  # only wait hosts (not switch, etc)
+    # echo "wait pids: $HOSTPIDS"
+    # wait $HOSTPIDS  # only wait hosts (not switch, etc)
     # screen -ls
-    sleep 900
+    echo "sleep..."
+    sleep infinity
 }
 
 ### EXIT ###
@@ -798,7 +799,7 @@ EXIT() {
         if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
         rm -f $SESSIONDIR/*.pid $SESSIONDIR/*.mgmt $SESSIONDIR/*.log
         rm -f $LOCK
-        if [ "$QEMUDISPLAY" = "tmux" ] ; then TMUX_EXIT ; fi
+        # if [ "$QEMUDISPLAY" = "tmux" ] ; then TMUX_EXIT ; fi
         exit
     fi
 }
@@ -838,13 +839,14 @@ START() {
     fi
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
-    if [ "$QEMUDISPLAY" = "tmux" ] ; then
-        # TMUX_ATTACH
-        sleep 900
-    else
-        WAIT
-        END
-    fi
+    # if [ "$QEMUDISPLAY" = "tmux" ] ; then
+    #     # TMUX_ATTACH
+    #     # sleep 900
+    #     sleep infinity
+    # else
+    WAIT
+    END
+    # fi
     # trap call EXIT at regular exit!
 }
 
