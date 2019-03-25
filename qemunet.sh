@@ -663,8 +663,9 @@ HOST() {
         CMD="$CMD -hda $HOSTQCOW" # using qcow2 image file (raw not modified)
         # copy files inside VM
         if [ $COPYIN -eq 1 ] ; then
-            # TODO: check virt-copy-in
-            [ -d "$SESSIONDIR/$HOSTNAME" ] && virt-copy-in -a $HOSTQCOW $SESSIONDIR/$HOSTNAME/* /mnt/host/
+            # vmware bug (https://bugzilla.redhat.com/show_bug.cgi?id=1648403)
+            # tcg backend disable kvm when "virt-copy-in" is used :-()
+            [ -d "$SESSIONDIR/$HOSTNAME" ] && ( LIBGUESTFS_BACKEND_SETTINGS=force_tcg virt-copy-in -a $HOSTQCOW $SESSIONDIR/$HOSTNAME/* /mnt/host/ )
         fi
     fi
     
