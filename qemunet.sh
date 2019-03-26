@@ -44,9 +44,9 @@ INTERNET=0
 NOKVM=0
 SOCKET=0
 RAW=0
-MOUNT=0
-COPYIN=0
-EXTRADISK=0
+MOUNTDIR=1
+MOUNTDISK=1
+# COPYIN=0
 XTERM=0
 USEVLAN=0
 # RMQCOW2=0
@@ -159,9 +159,11 @@ USAGE() {
     echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable Slirp interface for Internet access (ping not allowed)"
-    echo "    -C: copy data from <session directory>/<hostname>/ into /mnt/host of qcow2 disk"
-    echo "    -m: expose <session directory>/<hostname>/ as mount tag 'host' (type 9p/virtio)"
-    echo "    -f: expose <session directory>/<hostname>.disk as second disk (qemu -hdb option)"
+#   echo "    -C: copy data from <session directory>/<hostname>/ into /mnt/host of qcow2 disk"
+    echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (linux only)"
+    echo "    -M: disable mount directory"
+    echo "    -f: mount extra disk <session directory>/<hostname>.disk (-hdb option in qemu)"
+    echo "    -F: disable mount disk"
     echo "    -v: enable VLAN support"
     echo "    -k: enable KVM full virtualization support (default)"
     echo "    -K: disable KVM full virtualization support (not recommanded)"
@@ -171,7 +173,7 @@ USAGE() {
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:imCfkKxyvd:h" OPT; do
+    while getopts "t:a:s:S:c:l:imMfFkKxyvd:h" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -207,17 +209,20 @@ GETARGS() {
                 INTERNET=1
             ;;
             m)
-                MOUNT=1
+                MOUNTDIR=1
+            ;;
+            M)
+                MOUNTDIR=0
             ;;
             f)
-                EXTRADISK=1
+                MOUNTDISK=1
             ;;
-            # M)
-            #     MOUNT=0
+            F)
+                MOUNTDISK=0
+            ;;
+            # C)
+            #     COPYIN=1
             # ;;
-            C)
-                COPYIN=1
-            ;;
             d)
                 QEMUDISPLAY="$OPTARG" # check $DISPLAY MODE
             ;;
@@ -340,7 +345,7 @@ CHECKRC() {
     fi
     
     # check libvirt0 and libvirt-clients for -m option
-    if [ $MOUNT -eq 1 ] ; then
+    if [ $MOUNTDIR -eq 1 ] ; then
         which virsh &> /dev/null
         [ $? -ne 0 ] && echo "ERROR: virsh not found, but required for -m option!" && exit
     fi    
@@ -660,9 +665,9 @@ HOST() {
         if ! [ -r "$HOSTQCOW" ] ; then echo "ERROR: qcow2 image file $HOSTQCOW not found!"; EXIT ; fi
         CMD="$CMD -hda $HOSTQCOW" # using qcow2 image file (raw not modified)
         # add extra disk in VM (/dev/sdb)
-        if [ $EXTRADISK -eq 1 ] ; then
-            HOSTEXTRADISK="$SESSIONDIR/$HOSTNAME.disk"
-            [ -f "$HOSTEXTRADISK" ] && CMD="$CMD -hdb $HOSTEXTRADISK"
+        if [ $MOUNTDISK -eq 1 ] ; then
+            HOSTMOUNTDISK="$SESSIONDIR/$HOSTNAME.disk"
+            [ -f "$HOSTMOUNTDISK" ] && CMD="$CMD -hdb $HOSTMOUNTDISK"
         fi
         # copy files inside VM
         if [ $COPYIN -eq 1 ] ; then
@@ -674,7 +679,7 @@ HOST() {
     fi
     
     # share directory /mnt/host (linux only)
-    if [ "$HOSTSYS" = "linux" -a "$MOUNT" -eq 1 ] ; then
+    if [ "$HOSTSYS" = "linux" -a "$MOUNTDIR" -eq 1 ] ; then
         SHAREDIR="$SESSIONDIR/$HOSTNAME"
         mkdir -p $SHAREDIR
         # SECURITY="mapped" # files are created with Qemu user credentials and the client-user's credentials are saved in extended attributes.
