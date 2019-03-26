@@ -32,7 +32,7 @@ SESSIONID=$(mktemp -u -d qemunet-$USER-XXXXXX)
 SESSIONDIR=""
 SESSIONLINK="session" # session link to session directory
 TOPOLOGY=""
-IMGARCHIVE=""
+EXTARCHIVE=""
 SESSIONARCHIVE=""
 THESYSNAME=""
 
@@ -44,11 +44,12 @@ INTERNET=0
 NOKVM=0
 SOCKET=0
 RAW=0
-MOUNT=1
+MOUNT=0
 COPYIN=0
+EXTRADISK=0
 XTERM=0
 USEVLAN=0
-RMQCOW2=0
+# RMQCOW2=0
 SWITCHTERM=0
 QEMUDISPLAY="graphic" # xterm or rxvt or tmux or graphic or socket
 
@@ -139,12 +140,12 @@ USAGE() {
     echo "  $(basename $0) -S session/directory [...]"
     echo "Options:"
     echo "    -t <topology>: network topology file"
-    echo "    -s <session.tgz>: session archive"
-    echo "    -S <session directory>: session directory"
+    echo "    -s <session.tgz>: load session from an archive"
+    echo "    -S <session directory>: load session from a directory"
     echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
     echo "    -h: print this help message"
     echo "Advanced Options:"
-    echo "    -a <images.tgz>: load a qcow2 image archive for all VMs"
+    echo "    -a <extra.tgz>: decompress an extra archive in session directory"
     echo "    -c <config>: load system config file (default is qemunet.cfg)"
     echo "    -x: launch VM in xterm terminal (only for linux system running on ttyS0)"
     echo "    -d <display>: launch VM with special display mode: "
@@ -158,10 +159,9 @@ USAGE() {
     echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable Slirp interface for Internet access (ping not allowed)"
-    echo "    -C: copy data from <session directory>/<hostname>/ into /mnt/host (required -M) "
-    echo "    -m: mount <session directory>/<hostname>/ on /mnt/host (default for linux system)"
-    echo "    -M: disable 9p mount"
-    echo "    -q: ignore and remove qcow2 images for the running session"
+    echo "    -C: copy data from <session directory>/<hostname>/ into /mnt/host of qcow2 disk"
+    echo "    -m: expose <session directory>/<hostname>/ as mount tag 'host' (type 9p/virtio)"
+    echo "    -f: expose <session directory>/<hostname>.disk as second disk (qemu -hdb option)"
     echo "    -v: enable VLAN support"
     echo "    -k: enable KVM full virtualization support (default)"
     echo "    -K: disable KVM full virtualization support (not recommanded)"
@@ -171,7 +171,7 @@ USAGE() {
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:imMCkKxyqvd:h" OPT; do
+    while getopts "t:a:s:S:c:l:imCfkKxyvd:h" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -189,7 +189,7 @@ GETARGS() {
                 SESSIONDIR="$OPTARG"
             ;;
             a)
-                IMGARCHIVE="$OPTARG"
+                EXTARCHIVE="$OPTARG"
             ;;
             l)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -209,9 +209,12 @@ GETARGS() {
             m)
                 MOUNT=1
             ;;
-            M)
-                MOUNT=0
+            f)
+                EXTRADISK=1
             ;;
+            # M)
+            #     MOUNT=0
+            # ;;
             C)
                 COPYIN=1
             ;;
@@ -233,12 +236,9 @@ GETARGS() {
             v)
                 USEVLAN=1
             ;;
-            # r)
-            #     SOCKET=1
+            # q)
+            #     RMQCOW2=1
             # ;;
-            q)
-                RMQCOW2=1
-            ;;
             h)
                 USAGE
             ;;
@@ -252,7 +252,6 @@ GETARGS() {
     # check args
     if [ $# -eq 0 ] ; then USAGE ; fi
     if [ -z "$MODE" ] ; then USAGE ; fi
-    if [ $MOUNT -eq 1  -a $COPYIN -eq 1 ] ; then USAGE ; fi
 
 }
 
@@ -375,12 +374,12 @@ INITSESSION() {
         
         ### check session input param
         if [ -n "$TOPOLOGY" -a ! -r "$TOPOLOGY" ] ; then echo "ERROR: Topology file $TOPOLOGY not found!" ; exit ; fi
-        if [ -n "$IMGARCHIVE" -a ! -r "$IMGARCHIVE" ] ; then echo "ERROR: Image archive $IMGARCHIVE not found!" ; exit ; fi
+        if [ -n "$EXTARCHIVE" -a ! -r "$EXTARCHIVE" ] ; then echo "ERROR: Extra archive $EXTARCHIVE not found!" ; exit ; fi
         if [ -n "$SESSIONARCHIVE" -a ! -r "$SESSIONARCHIVE" ] ; then echo "ERROR: Session archive $SESSIONARCHIVE not found!" ; exit ; fi
         
         ### prepare session files from input param
         if [ -r "$TOPOLOGY" ] ; then cp $TOPOLOGY $SESSIONDIR/topology ; fi
-        if [ -r "$IMGARCHIVE" ] ; then tar xvzf $IMGARCHIVE -C $SESSIONDIR ; fi
+        if [ -r "$EXTARCHIVE" ] ; then tar xvzf $EXTARCHIVE -C $SESSIONDIR ; fi
         if [ -r "$SESSIONARCHIVE" ] ; then tar xzf $SESSIONARCHIVE -C $SESSIONDIR ; fi
         
         # set environment
@@ -408,9 +407,8 @@ INITSESSION() {
     echo "SESSION LINK: $SESSIONLINK"
     echo "QEMUNET CFG: $QEMUNETCFG"
     echo "NETWORK TOPOLOGY: $TOPOLOGY"
-    echo "IMAGE ARCHIVE: $IMGARCHIVE"
     echo "SESSION ARCHIVE: $SESSIONARCHIVE"
-    
+    echo "EXTRA ARCHIVE: $EXTARCHIVE"
 }
 
 ### 3) LOAD CONF ###
@@ -508,7 +506,7 @@ CREATEQCOW() {
     HOSTFS=$1
     HOSTQCOW=$2
     IMGCMD=""
-    if [ "$RMQCOW2" -eq 1 ] ; then rm -f "$HOSTQCOW" ; fi
+    # if [ "$RMQCOW2" -eq 1 ] ; then rm -f "$HOSTQCOW" ; fi
     if ! [ -r "$HOSTQCOW" ] ; then IMGCMD="$QEMUIMG create -q -b $HOSTFS -f qcow2 $HOSTQCOW" ;
 else IMGCMD="$QEMUIMG rebase -q -u -b $HOSTFS $HOSTQCOW" ; fi
     echo "[$(basename $HOSTQCOW)] $IMGCMD"
@@ -659,13 +657,19 @@ HOST() {
         # ln -sf $HOSTFS $SESSIONDIR/$HOSTNAME.img
         # create qcow2 if needed
         CREATEQCOW $HOSTFS $HOSTQCOW
-        if ! [ -r "$HOSTQCOW" ] ; then echo "ERROR: Qcow2 image file $HOSTQCOW not found!"; EXIT ; fi
+        if ! [ -r "$HOSTQCOW" ] ; then echo "ERROR: qcow2 image file $HOSTQCOW not found!"; EXIT ; fi
         CMD="$CMD -hda $HOSTQCOW" # using qcow2 image file (raw not modified)
+        # add extra disk in VM (/dev/sdb)
+        if [ $EXTRADISK -eq 1 ] ; then
+            HOSTEXTRADISK="$SESSIONDIR/$HOSTNAME.disk"
+            [ -f "$HOSTEXTRADISK" ] && CMD="$CMD -hdb $HOSTEXTRADISK"
+        fi
         # copy files inside VM
         if [ $COPYIN -eq 1 ] ; then
             # vmware|qemu bug (https://bugzilla.redhat.com/show_bug.cgi?id=1648403)
             # force_tcg: http://libguestfs.org/guestfs.3.html#force_tcg => disable KVM in virt-copy-in
-            [ -d "$SESSIONDIR/$HOSTNAME" ] && ( LIBGUESTFS_BACKEND_SETTINGS=force_tcg virt-copy-in -a $HOSTQCOW $SESSIONDIR/$HOSTNAME/* /mnt/host/ )
+            # export LIBGUESTFS_BACKEND_SETTINGS=force_tcg
+            [ -d "$SESSIONDIR/$HOSTNAME" ] && virt-copy-in -a $HOSTQCOW $SESSIONDIR/$HOSTNAME/* /mnt/host/
         fi
     fi
     
@@ -838,7 +842,7 @@ START() {
         echo "=> To access the QEMU console of each VM, please use the command:"
         echo "     $ ./connect.sh <session_dir> <vm_hostname>"
     fi
-    echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzf mysession.tgz * ; cd -\""
+    echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     # if [ "$QEMUDISPLAY" = "tmux" ] ; then
     #     # TMUX_ATTACH

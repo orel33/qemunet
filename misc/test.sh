@@ -17,6 +17,14 @@ reset # reset terminal
 
 BASIC="-name test -rtc base=localtime -enable-kvm -m 512 -hda $SESSIONDIR/my.qcow2"
 
+### FLOPPY ###
+
+# ./misc/create-floppy.sh misc/data $SESSIONDIR/floppy.img
+# FLOPPY="-fda $SESSIONDIR/floppy.img"
+# FLOPPY="-hdb $SESSIONDIR/floppy.img"
+# FLOPPY="-hdb $SESSIONDIR/floppy.img"
+# FLOPPY="-hdb fat:rw:/tmp/pouet" # it works, but it will be probably soon deprecated (VVFAT)
+
 ### DISPLAY ###
 
 # DISPLAY="-display none"
@@ -45,21 +53,24 @@ DISPLAY="-nographic"   # ok (no graphic display + redirect on stdio)
 # SOCKET="-serial tcp:localhost:7777"  # client mode (tcp, launch tcp server with "netcat -l 7777" before)
 
 ### SHARE ####
-
+# https://www.linux-kvm.org/page/9p_virtio
 # SHARE="-fsdev local,id=share0,path=$SESSIONDIR,security_model=mapped -device virtio-9p-pci,fsdev=share0,mount_tag=host"
-# mount -t 9p -o trans=virtio host /mnt/host
+
+# sudo mount -t 9p -o trans=virtio host /mnt/host
 
 ### BOOT ###
 # BOOT="-kernel $KERNEL -initrd $INITRD"
-BOOT="-kernel $KERNEL -initrd $INITRD -append \"root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0\""
+# BOOT="-kernel $KERNEL -initrd $INITRD -append \"root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0\""
+BOOT="-kernel $KERNEL -initrd $INITRD -append 'root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0'"
 
 ####################### RUN QEMU #######################
 
 # create qcow image based on raw image, else use qcow2 if available
 [ ! -f "$SESSIONDIR/my.qcow2" ] && qemu-img create -q -b $IMG -f qcow2 $SESSIONDIR/my.qcow2 
 
-CMD="qemu-system-x86_64 $BASIC $BOOT $SHARE $MONITOR $SOCKET $DISPLAY"
+CMD="qemu-system-x86_64 $BASIC $BOOT $FLOPPY $SHARE $MONITOR $SOCKET $DISPLAY"
 
-bash -c "echo $CMD ; ${CMD[@]}"
+bash -c "echo $CMD"
+bash -c "${CMD[@]}"
 
 # EOF
