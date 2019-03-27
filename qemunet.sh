@@ -341,7 +341,7 @@ INITSESSION() {
         
         ### prepare session files from input param
         if [ -r "$TOPOLOGY" ] ; then cp $TOPOLOGY $SESSIONDIR/topology ; fi
-        if [ -r "$EXTARCHIVE" ] ; then tar xvzf $EXTARCHIVE -C $SESSIONDIR ; fi
+        if [ -r "$EXTARCHIVE" ] ; then tar xzf $EXTARCHIVE -C $SESSIONDIR ; fi
         if [ -r "$SESSIONARCHIVE" ] ; then tar xzf $SESSIONARCHIVE -C $SESSIONDIR ; fi
         
         # set environment
@@ -457,7 +457,7 @@ DOWNLOAD() {
     # Uncompress disk image
     if [ -r "$HOSTFSTGZ" -a ! -r "$HOSTFS" ] ; then
         echo "=> Extracting disk image from archive for system $SYSNAME. Please, be patient..."
-        tar xvzf $HOSTFSTGZ -C $HOSTFSDIR
+        tar xzf $HOSTFSTGZ -C $HOSTFSDIR
     fi
 }
 
