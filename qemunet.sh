@@ -765,8 +765,8 @@ WAIT() {
     
     # wait $HOSTPIDS  # only wait hosts (not switch, etc)
     # screen -ls
-    
-    echo "sleep..."
+    # echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
+    echo "sleep... press ctrl-c to end me!"
     [ $BACKGROUND -eq 1 ] && BG
     sleep infinity
 }
@@ -778,7 +778,7 @@ WAIT() {
 EXIT() {
     # if [ $ONEXIT -eq 0 ] ; then
     #     ONEXIT=1
-    echo "=> Terminating all virtual hosts and switches"
+    echo ; echo "=> Terminating all virtual hosts and switches"
     # killing all
     ALLPIDS=$(jobs -rp)  # get all jobs launched by this script
     disown $ALLPIDS 2> /dev/null     # now, I don't care from all these background processes... so no error messages are printed by bash
@@ -794,13 +794,15 @@ EXIT() {
     if [ "$QEMUDISPLAY" = "screen" ] ; then $QEMUNETDIR/misc/screen-exit.sh ; fi
     #     exit  # exit must nut be called here!
     # fi
+    # echo
+    echo "********** Goodbye! **********"
 }
 
-END() {
-    echo
-    echo "********** Goodbye! **********"
-    EXIT
-}
+# END() {
+#     echo
+#     echo "********** Goodbye! **********"
+#     EXIT
+# }
 
 ### TRAP ###
 
@@ -825,20 +827,20 @@ START() {
     fi
     echo "********** Waiting end of Session **********"
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
-    echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
+    WAIT
     # if [ "$QEMUDISPLAY" = "socket" ] ; then
     #     echo "=> To access the QEMU console of each VM, please use the command:"
     #     echo "     $ ./connect.sh <session_dir> <vm_hostname>"
     # fi
-    echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
-    echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
+    # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
+    # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     # if [ "$QEMUDISPLAY" = "tmux" ] ; then
     #     # $QEMUNETDIR/misc/tmux-attach.sh
     #     # sleep 900
     #     sleep infinity
     # else
-    WAIT
-    END
+    # WAIT
+    # END
     # fi
     # trap call EXIT at regular exit!
 }
@@ -848,5 +850,6 @@ START() {
 LOGO
 GETARGS $*
 START
+
 
 # EOF
