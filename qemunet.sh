@@ -78,51 +78,6 @@ TERMCMD () {
     fi
 }
 
-### TMUX ###
-
-# TMUXID="$SESSIONID"
-TMUXID="qemunet"
-
-TMUX_START() {
-    tmux start-server
-    tmux new-session -d -s $TMUXID -n console bash # tmux console
-    tmux set-option -t $TMUXID -g default-shell /bin/bash
-    tmux set-option -t $TMUXID -g mouse on # enable to select panes/windows  with mouse (howewer, hold shift key, to copy/paste with mouse)
-    # tmux set-option -g prefix C-b
-    tmux bind-key C-c kill-session  # press "C-b C-c" to kill session!
-    tmux set-window-option -g window-status-current-bg red
-    tmux set-window-option -g aggressive-resize on
-    # tmux set-option -g allow-rename off
-    tmux set-option -g status-left ''
-    tmux set-option -g status-right '#[fg=colour233,bg=colour241,bold] %d/%m/%Y #[fg=colour233,bg=colour245,bold] %H:%M:%S '
-    tmux bind P select-window -t :0 \\\; send-keys "$QEMUNETDIR/tmux-panes.sh" Enter \\\; select-window -t :1   # one single window with multiple panes
-    tmux bind W select-window -t :0 \\\; send-keys "$QEMUNETDIR/tmux-windows.sh" Enter \\\; select-window -t :1 # multiple windows
-}
-
-TMUX_ATTACH() {
-    TMUXPIDS=$(tmux list-panes -s -t $TMUXID  -F "#{pane_pid}") # wait cannot be used, for TMUX processes are not children of this bash script!
-    TMUXTTY=$(tmux list-panes -t $TMUXID:0 -F "#{pane_tty}")
-    echo > $TMUXTTY
-    cat $QEMUNETDIR/logo.txt > $TMUXTTY
-    echo > $TMUXTTY
-    echo "***********************************************" > $TMUXTTY
-    echo "TMUX session name: $TMUXID" > $TMUXTTY
-    echo "Press \"C-b C-c\" to kill the TMUX session." > $TMUXTTY
-    echo "Hold shift key, to copy/paste with mouse middle-button." > $TMUXTTY
-    echo "***********************************************" > $TMUXTTY
-    echo > $TMUXTTY
-    echo > $TMUXTTY
-    # TMUX_JOIN
-    # TMUX_SPLIT
-    tmux select-window -t $TMUXID:0  # select console (window index 0)
-    tmux attach-session -t $TMUXID   # tmux in foreground
-}
-
-
-TMUX_EXIT() {
-    tmux kill-session -t $TMUXID &> /dev/null
-}
-
 ### LOGO ###
 
 LOGO() {
@@ -709,7 +664,8 @@ HOST() {
         # append kernel args
         KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0" # both tty0 and ttyS0 are useful
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
-        CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
+        # CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
+        CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS'"
     fi
     
     ### launch qemu command with different display mode (socket, xterm, graphic)
@@ -719,7 +675,6 @@ HOST() {
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}"
-        # tmux new-session -d -s $SESSIONID -n $HOSTNAME bash -c "${CMD[@]}" # detached
     # elif [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
     #     # bug: with this option, any ctrl-c (SIGINT) in VM will kill all qemu session!
     #     # solution: use socat in raw mode with escape option!
@@ -736,15 +691,12 @@ HOST() {
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         screen -S "qemunet:$HOSTNAME" -d -m bash -c "${CMD[@]}" # detached
-        # tmux new-session -d -s $SESSIONID -n $HOSTNAME bash -c "${CMD[@]}" # detached
     # tmux
     elif [ "$QEMUDISPLAY" = "tmux" ] ; then
         CMD="$CMD -nographic"
-        # echo "tmux new-window -t $TMUXID -n $1" ; # windows
-        # echo "tmux split-window -t $TMUXID" ; # panes
-        # XCMD=$(TERMCMD $HOSTNAME)
         echo "[$HOSTNAME] $CMD"
-        tmux new-window -t $TMUXID -n bash -c "${CMD[@]}" # detached
+        TMUXID="qemunet"
+        tmux new-window -t $TMUXID -n $HOSTNAME bash -c "${CMD[@]}" # detached
     # xterm
     elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then 
         CMD="$CMD -nographic"
@@ -819,7 +771,7 @@ EXIT() {
         if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
         rm -f $SESSIONDIR/*.pid $SESSIONDIR/*.mgmt $SESSIONDIR/*.log
         rm -f $LOCK
-        # if [ "$QEMUDISPLAY" = "tmux" ] ; then TMUX_EXIT ; fi
+        # if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
         exit
     fi
 }
@@ -837,7 +789,8 @@ trap 'EXIT' INT EXIT TERM
 ### START ###
 
 START() {
-    if [ "$QEMUDISPLAY" = "tmux" ] ; then TMUX_START ; fi
+    if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
+
     echo "********** Let's Rock **********"
     CHECKRC
     echo "********** Loading VM Config **********"
@@ -860,7 +813,7 @@ START() {
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     # if [ "$QEMUDISPLAY" = "tmux" ] ; then
-    #     # TMUX_ATTACH
+    #     # $QEMUNETDIR/misc/tmux-attach.sh
     #     # sleep 900
     #     sleep infinity
     # else
