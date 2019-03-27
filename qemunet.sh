@@ -156,7 +156,8 @@ USAGE() {
     echo "       * xfce4: qemu serial/text mode running within xfce4-terminal"
     echo "       * tmux: qemu serial/text mode running within a tmux session (experimental)"
     echo "       * screen: qemu serial/text mode running within a screen session (experimental)"
-    echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
+    echo "       * none: no graphic (experimental)"
+    #   echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable Slirp interface for Internet access (ping not allowed)"
 #   echo "    -C: copy data from <session directory>/<hostname>/ into /mnt/host of qcow2 disk"
@@ -709,8 +710,14 @@ HOST() {
     fi
     
     ### launch qemu command with different display mode (socket, xterm, graphic)
-    
-    if [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
+
+    if [ "$QEMUDISPLAY" = "none" ] ; then # no display
+        CMD="$CMD -nographic"
+        # CMD="$CMD -display none"
+        echo "[$HOSTNAME] $CMD"
+        bash -c "${CMD[@]}"
+        # tmux new-session -d -s $SESSIONID -n $HOSTNAME bash -c "${CMD[@]}" # detached
+    elif [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
         # bug: with this option, any ctrl-c (SIGINT) in VM will kill all qemu session!
         # solution: use socat in raw mode with escape option!
         CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"
