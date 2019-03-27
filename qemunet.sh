@@ -52,6 +52,7 @@ USEVLAN=0
 # RMQCOW2=0
 SWITCHTERM=0
 QEMUDISPLAY="graphic" # xterm or rxvt or tmux or graphic or socket
+BACKGROUND=0
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
@@ -67,11 +68,11 @@ WGET="wget"
 TERMCMD () {
     if [ "$QEMUDISPLAY" = "xterm" ] ; then
         echo "xterm -fg white -bg black -T $1 -e" ;
-    elif [ "$QEMUDISPLAY" = "rxvt" ] ; then
+        elif [ "$QEMUDISPLAY" = "rxvt" ] ; then
         echo "rxvt -bg Black -fg White -title $1 -e bash -c" ;
-    elif [ "$QEMUDISPLAY" = "gnome" ] ; then
+        elif [ "$QEMUDISPLAY" = "gnome" ] ; then
         echo "gnome-terminal -- bash -c" ;
-    elif [ "$QEMUDISPLAY" = "xfce4" ] ; then
+        elif [ "$QEMUDISPLAY" = "xfce4" ] ; then
         echo "xfce4-terminal -T $1 -x bash -c" ;
     else
         echo "ERROR:Invalid display mode!"
@@ -113,6 +114,7 @@ USAGE() {
     echo "       * screen: qemu serial/text mode running within a screen session (experimental)"
     echo "       * none: no graphic (experimental)"
     #   echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
+    echo "    -b: run qemunet as a background command"
     echo "More Advanced Options:"
     echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)"
     echo "    -M: disable mount directory"
@@ -123,14 +125,14 @@ USAGE() {
     echo "    -v: enable VLAN support"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable Slirp interface for Internet access (ping not allowed)"
-#   echo "    -C: copy data from <session directory>/<hostname>/ into /mnt/host of qcow2 disk"
+    #   echo "    -C: copy data from <session directory>/<hostname>/ into /mnt/host of qcow2 disk"
     exit
 }
 
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:imMfFkKxyvd:h" OPT; do
+    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hb" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -198,9 +200,9 @@ GETARGS() {
             v)
                 USEVLAN=1
             ;;
-            # q)
-            #     RMQCOW2=1
-            # ;;
+            b)
+                BACKGROUND=1
+            ;;
             h)
                 USAGE
             ;;
@@ -214,7 +216,7 @@ GETARGS() {
     # check args
     if [ $# -eq 0 ] ; then USAGE ; fi
     if [ -z "$MODE" ] ; then USAGE ; fi
-
+    
 }
 
 ### 1) CHECK RC ###
@@ -305,8 +307,8 @@ CHECKRC() {
     if [ $MOUNTDIR -eq 1 ] ; then
         which virsh &> /dev/null
         [ $? -ne 0 ] && echo "ERROR: virsh not found, but required for -m option!" && exit
-    fi    
-
+    fi
+    
     # check libguestfs-tools for -C option
     # if [ $COPYIN -eq 1 ] ; then
     #     which virt-copy-in &> /dev/null
@@ -669,36 +671,36 @@ HOST() {
     fi
     
     ### launch qemu command with different display mode (socket, xterm, graphic)
-
+    
     if [ "$QEMUDISPLAY" = "none" ] ; then # no display
         CMD="$CMD -nographic"
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}"
-    # elif [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
-    #     # bug: with this option, any ctrl-c (SIGINT) in VM will kill all qemu session!
-    #     # solution: use socat in raw mode with escape option!
-    #     CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"
-    #     # redirect both qemu monitor & console in two Unix sockets, that can be connected with socat
-    #     # $ socat stdin,raw,echo=0 unix-connect:session/<hostname>.sock
-    #     CMD="$CMD -serial unix:$SESSIONDIR/$HOSTNAME.sock,server" # wait client connection, else use "nowait" option
-    #     # CMD="$CMD -nographic"
-    #     CMD="$CMD -display none"
-    #     echo "[$HOSTNAME] $CMD"
-    #     bash -c "${CMD[@]}" &
-    elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
+        # elif [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
+        #     # bug: with this option, any ctrl-c (SIGINT) in VM will kill all qemu session!
+        #     # solution: use socat in raw mode with escape option!
+        #     CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"
+        #     # redirect both qemu monitor & console in two Unix sockets, that can be connected with socat
+        #     # $ socat stdin,raw,echo=0 unix-connect:session/<hostname>.sock
+        #     CMD="$CMD -serial unix:$SESSIONDIR/$HOSTNAME.sock,server" # wait client connection, else use "nowait" option
+        #     # CMD="$CMD -nographic"
+        #     CMD="$CMD -display none"
+        #     echo "[$HOSTNAME] $CMD"
+        #     bash -c "${CMD[@]}" &
+        elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
         CMD="$CMD -nographic"
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         screen -S "qemunet:$HOSTNAME" -d -m bash -c "${CMD[@]}" # detached
-    # tmux
-    elif [ "$QEMUDISPLAY" = "tmux" ] ; then
+        # tmux
+        elif [ "$QEMUDISPLAY" = "tmux" ] ; then
         CMD="$CMD -nographic"
         echo "[$HOSTNAME] $CMD"
         TMUXID="qemunet"
         tmux new-window -t $TMUXID -n $HOSTNAME bash -c "${CMD[@]}" # detached
-    # xterm
-    elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then 
+        # xterm
+        elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then
         CMD="$CMD -nographic"
         XCMD=$(TERMCMD $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
@@ -742,38 +744,56 @@ TRUNK(){
     TRUNKPIDS="$TRUNKPIDS $PID"
 }
 
+### BG ###
+
+BG() {
+    # background current script! 
+    # https://unix.stackexchange.com/questions/403895/automatically-move-a-script-into-the-background
+    # really portable?
+    (kill -STOP $$ ; kill -CONT $$) &
+}
+
 ### WAIT ###
 
 WAIT() {
+    # echo "ME: $$"
     # echo "wait pids: $HOSTPIDS"
+    # ALLPIDS=$(jobs -rp)  # get all jobs launched by this script
+    # echo "HOST PIDS: $HOSTPIDS"  # empty for tmux or screen display mode!
+    # echo "ALL PIDS: $ALLPIDS"
+    # echo "SWITCH PIDS: $SWITCHPIDS"
+    
     # wait $HOSTPIDS  # only wait hosts (not switch, etc)
     # screen -ls
+    
     echo "sleep..."
+    [ $BACKGROUND -eq 1 ] && BG
     sleep infinity
 }
 
 ### EXIT ###
 
-ONEXIT=0
+# ONEXIT=0
 
 EXIT() {
-    if [ $ONEXIT -eq 0 ] ; then
-        ONEXIT=1
-        echo "=> Terminating all virtual hosts and switches"
-        # killing all
-        ALLPIDS=$(jobs -rp)  # get all jobs launched by this script
-        disown $ALLPIDS 2> /dev/null     # now, I don't care from all these background processes... so no error messages are printed by bash
-        kill $ALLPIDS 2> /dev/null
-        # kill deamons explicitly
-        if [ -n "$SWITCHPIDS" ] ; then kill -9 $SWITCHPIDS 2> /dev/null; wait $! 2> /dev/null; fi
-        if [ -n "$TRUNKPIDS" ] ; then kill -9 $TRUNKPIDS 2> /dev/null; wait $! 2> /dev/null ; fi
-        # clean session files
-        if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
-        rm -f $SESSIONDIR/*.pid $SESSIONDIR/*.mgmt $SESSIONDIR/*.log
-        rm -f $LOCK
-        # if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
-        exit
-    fi
+    # if [ $ONEXIT -eq 0 ] ; then
+    #     ONEXIT=1
+    echo "=> Terminating all virtual hosts and switches"
+    # killing all
+    ALLPIDS=$(jobs -rp)  # get all jobs launched by this script
+    disown $ALLPIDS 2> /dev/null     # now, I don't care from all these background processes... so no error messages are printed by bash
+    kill $ALLPIDS 2> /dev/null
+    # kill deamons explicitly
+    if [ -n "$SWITCHPIDS" ] ; then kill -9 $SWITCHPIDS 2> /dev/null; wait $! 2> /dev/null; fi
+    if [ -n "$TRUNKPIDS" ] ; then kill -9 $TRUNKPIDS 2> /dev/null; wait $! 2> /dev/null ; fi
+    # clean session files
+    if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
+    rm -f $SESSIONDIR/*.pid $SESSIONDIR/*.mgmt $SESSIONDIR/*.log
+    rm -f $LOCK
+    if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
+    if [ "$QEMUDISPLAY" = "screen" ] ; then $QEMUNETDIR/misc/screen-exit.sh ; fi
+    #     exit  # exit must nut be called here!
+    # fi
 }
 
 END() {
@@ -784,13 +804,13 @@ END() {
 
 ### TRAP ###
 
-trap 'EXIT' INT EXIT TERM
+trap 'EXIT' EXIT
 
 ### START ###
 
 START() {
     if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
-
+    
     echo "********** Let's Rock **********"
     CHECKRC
     echo "********** Loading VM Config **********"
