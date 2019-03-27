@@ -151,23 +151,24 @@ USAGE() {
     echo "    -d <display>: launch VM with special display mode: "
     echo "       * graphic: standard qemu display mode (default mode)"
     echo "       * xterm: qemu serial/text mode running within xterm (same as -x option)"
-    echo "       * rxvt: same as xterm mode, but rxvt command instead"
-    echo "       * gnome: qemu serial/text mode running within gnome-terminal"
-    echo "       * xfce4: qemu serial/text mode running within xfce4-terminal"
+    echo "       * rxvt: same as xterm mode, but using rxvt instead"
+    echo "       * gnome: same as xterm mode, but using gnome-terminal instead"
+    echo "       * xfce4: same as xterm mode, but using xfce4-terminal instead"
     echo "       * tmux: qemu serial/text mode running within a tmux session (experimental)"
     echo "       * screen: qemu serial/text mode running within a screen session (experimental)"
     echo "       * none: no graphic (experimental)"
     #   echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
+    echo "More Advanced Options:"
+    echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)"
+    echo "    -M: disable mount directory"
+    echo "    -f: mount extra disk <session directory>/<hostname>.disk (default)"
+    echo "    -F: disable mount disk"
+    echo "    -k: enable KVM full virtualization support (default)"
+    echo "    -K: disable KVM full virtualization support (not recommanded)"
+    echo "    -v: enable VLAN support"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable Slirp interface for Internet access (ping not allowed)"
 #   echo "    -C: copy data from <session directory>/<hostname>/ into /mnt/host of qcow2 disk"
-    echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (linux only)"
-    echo "    -M: disable mount directory"
-    echo "    -f: mount extra disk <session directory>/<hostname>.disk (-hdb option in qemu)"
-    echo "    -F: disable mount disk"
-    echo "    -v: enable VLAN support"
-    echo "    -k: enable KVM full virtualization support (default)"
-    echo "    -K: disable KVM full virtualization support (not recommanded)"
     exit
 }
 
@@ -352,10 +353,10 @@ CHECKRC() {
     fi    
 
     # check libguestfs-tools for -C option
-    if [ $COPYIN -eq 1 ] ; then
-        which virt-copy-in &> /dev/null
-        [ $? -ne 0 ] && echo "ERROR: virt-copy-in not found, but required for -C option!" && exit
-    fi
+    # if [ $COPYIN -eq 1 ] ; then
+    #     which virt-copy-in &> /dev/null
+    #     [ $? -ne 0 ] && echo "ERROR: virt-copy-in not found, but required for -C option!" && exit
+    # fi
     
 }
 
@@ -658,25 +659,27 @@ HOST() {
     # use raw or qcow2 system image
     if [ "$RAW" -eq 1 ] ; then
         # CMD="$CMD -hda $HOSTFS"   # use raw image file
-        CMD="$CMD -drive format=raw,file=$HOSTFS"
+        CMD="$CMD -drive file=$HOSTFS,format=raw,index=0,media=disk"
     else
         # ln -sf $HOSTFS $SESSIONDIR/$HOSTNAME.img
         # create qcow2 if needed
         CREATEQCOW $HOSTFS $HOSTQCOW
         if ! [ -r "$HOSTQCOW" ] ; then echo "ERROR: qcow2 image file $HOSTQCOW not found!"; EXIT ; fi
-        CMD="$CMD -hda $HOSTQCOW" # using qcow2 image file (raw not modified)
+        # CMD="$CMD -hda $HOSTQCOW" # using qcow2 image file (raw not modified)
+        CMD="$CMD -drive file=$HOSTQCOW,format=qcow2,index=0,media=disk"
         # add extra disk in VM (/dev/sdb)
         if [ $MOUNTDISK -eq 1 ] ; then
             HOSTMOUNTDISK="$SESSIONDIR/$HOSTNAME.disk"
-            [ -f "$HOSTMOUNTDISK" ] && CMD="$CMD -hdb $HOSTMOUNTDISK"
+            # [ -f "$HOSTMOUNTDISK" ] && CMD="$CMD -hdb $HOSTMOUNTDISK"
+            [ -f "$HOSTMOUNTDISK" ] && CMD="$CMD -drive file=$HOSTMOUNTDISK,format=raw,index=1,media=disk"
         fi
-        # copy files inside VM
-        if [ $COPYIN -eq 1 ] ; then
-            # vmware|qemu bug (https://bugzilla.redhat.com/show_bug.cgi?id=1648403)
-            # force_tcg: http://libguestfs.org/guestfs.3.html#force_tcg => disable KVM in virt-copy-in
-            # export LIBGUESTFS_BACKEND_SETTINGS=force_tcg
-            [ -d "$SESSIONDIR/$HOSTNAME" ] && virt-copy-in -a $HOSTQCOW $SESSIONDIR/$HOSTNAME/* /mnt/host/
-        fi
+        # # copy files inside VM
+        # if [ $COPYIN -eq 1 ] ; then
+        #     # vmware|qemu bug (https://bugzilla.redhat.com/show_bug.cgi?id=1648403)
+        #     # force_tcg: http://libguestfs.org/guestfs.3.html#force_tcg => disable KVM in virt-copy-in
+        #     # export LIBGUESTFS_BACKEND_SETTINGS=force_tcg
+        #     [ -d "$SESSIONDIR/$HOSTNAME" ] && virt-copy-in -a $HOSTQCOW $SESSIONDIR/$HOSTNAME/* /mnt/host/
+        # fi
     fi
     
     # share directory /mnt/host (linux only)
@@ -717,17 +720,17 @@ HOST() {
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}"
         # tmux new-session -d -s $SESSIONID -n $HOSTNAME bash -c "${CMD[@]}" # detached
-    elif [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
-        # bug: with this option, any ctrl-c (SIGINT) in VM will kill all qemu session!
-        # solution: use socat in raw mode with escape option!
-        CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"
-        # redirect both qemu monitor & console in two Unix sockets, that can be connected with socat
-        # $ socat stdin,raw,echo=0 unix-connect:session/<hostname>.sock
-        CMD="$CMD -serial unix:$SESSIONDIR/$HOSTNAME.sock,server" # wait client connection, else use "nowait" option
-        # CMD="$CMD -nographic"
-        CMD="$CMD -display none"
-        echo "[$HOSTNAME] $CMD"
-        bash -c "${CMD[@]}" &
+    # elif [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
+    #     # bug: with this option, any ctrl-c (SIGINT) in VM will kill all qemu session!
+    #     # solution: use socat in raw mode with escape option!
+    #     CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"
+    #     # redirect both qemu monitor & console in two Unix sockets, that can be connected with socat
+    #     # $ socat stdin,raw,echo=0 unix-connect:session/<hostname>.sock
+    #     CMD="$CMD -serial unix:$SESSIONDIR/$HOSTNAME.sock,server" # wait client connection, else use "nowait" option
+    #     # CMD="$CMD -nographic"
+    #     CMD="$CMD -display none"
+    #     echo "[$HOSTNAME] $CMD"
+    #     bash -c "${CMD[@]}" &
     elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
         CMD="$CMD -nographic"
         # CMD="$CMD -display none"
@@ -804,7 +807,7 @@ ONEXIT=0
 EXIT() {
     if [ $ONEXIT -eq 0 ] ; then
         ONEXIT=1
-        echo "=> Killing all virtual hosts and switches"
+        echo "=> Terminating all virtual hosts and switches"
         # killing all
         ALLPIDS=$(jobs -rp)  # get all jobs launched by this script
         disown $ALLPIDS 2> /dev/null     # now, I don't care from all these background processes... so no error messages are printed by bash
@@ -850,10 +853,10 @@ START() {
     echo "********** Waiting end of Session **********"
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
     echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
-    if [ "$QEMUDISPLAY" = "socket" ] ; then
-        echo "=> To access the QEMU console of each VM, please use the command:"
-        echo "     $ ./connect.sh <session_dir> <vm_hostname>"
-    fi
+    # if [ "$QEMUDISPLAY" = "socket" ] ; then
+    #     echo "=> To access the QEMU console of each VM, please use the command:"
+    #     echo "     $ ./connect.sh <session_dir> <vm_hostname>"
+    # fi
     echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     # if [ "$QEMUDISPLAY" = "tmux" ] ; then
