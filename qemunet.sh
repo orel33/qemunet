@@ -125,14 +125,14 @@ USAGE() {
     echo "    -v: enable VLAN support"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable qemu Slirp interface for Internet access (ping not allowed)"
-    echo "    -z: append linux kernel arguments (linux only)"
+    echo "    -z <args>: append linux kernel arguments (linux only)"
     exit
 }
 
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hbz" OPT; do
+    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hbz:" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
