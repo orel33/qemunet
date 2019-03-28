@@ -751,7 +751,7 @@ BG() {
     # https://unix.stackexchange.com/questions/403895/automatically-move-a-script-into-the-background
     # FIXME: sometimes... BG fail?!
     echo "ME=$$"
-    ( sleep 1 ; kill -STOP $$ ; ps -S --forest ; kill -CONT $$ )  &
+    ( sleep 1 ; kill -STOP $$ ; ps -S -O size,pmem --forest ; kill -CONT $$ )  &
 }
 
 ### WAIT ###
