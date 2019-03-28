@@ -35,6 +35,7 @@ TOPOLOGY=""
 EXTARCHIVE=""
 SESSIONARCHIVE=""
 THESYSNAME=""
+OPTKERNELARGS=""
 
 # mode
 MODE=""  # "SESSION" or "STANDALONE"
@@ -91,14 +92,13 @@ USAGE() {
     echo "A light shell script based on QEMU Virtual Machine (VM) and VDE Virtual Switch to enable easy Virtual Networking."
     echo
     echo "Start/restore a session:"
-    echo "  $(basename $0) -t topology [-a images.tgz] [...]"
+    echo "  $(basename $0) -t topology [-a extra.tgz] [...]"
     echo "  $(basename $0) -s session.tgz [...]"
     echo "  $(basename $0) -S session/directory [...]"
     echo "Options:"
     echo "    -t <topology>: network topology file"
     echo "    -s <session.tgz>: load session from an archive"
     echo "    -S <session directory>: load session from a directory"
-    echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
     echo "    -h: print this help message"
     echo "Advanced Options:"
     echo "    -a <extra.tgz>: decompress an extra archive in session directory"
@@ -113,9 +113,9 @@ USAGE() {
     echo "       * tmux: qemu serial/text mode running within a tmux session (experimental)"
     echo "       * screen: qemu serial/text mode running within a screen session (experimental)"
     echo "       * none: no graphic (experimental)"
-    #   echo "       * socket: redirect qemu console & monitor display to Unix socket (experimental)"
-    echo "    -b: run qemunet as a background command"
     echo "More Advanced Options:"
+    echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
+    echo "    -b: run qemunet as a background command"
     echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)"
     echo "    -M: disable mount directory"
     echo "    -f: mount extra disk <session directory>/<hostname>.disk (default)"
@@ -124,15 +124,15 @@ USAGE() {
     echo "    -K: disable KVM full virtualization support (not recommanded)"
     echo "    -v: enable VLAN support"
     echo "    -y: launch VDE switch management console in terminal"
-    echo "    -i: enable Slirp interface for Internet access (ping not allowed)"
-    #   echo "    -C: copy data from <session directory>/<hostname>/ into /mnt/host of qcow2 disk"
+    echo "    -i: enable qemu Slirp interface for Internet access (ping not allowed)"
+    echo "    -z: append linux kernel arguments (linux only)"
     exit
 }
 
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hb" OPT; do
+    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hbz" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -179,9 +179,9 @@ GETARGS() {
             F)
                 MOUNTDISK=0
             ;;
-            # C)
-            #     COPYIN=1
-            # ;;
+            z)
+                OPTKERNELARGS="$OPTARG"
+            ;;
             d)
                 QEMUDISPLAY="$OPTARG" # check $DISPLAY MODE
             ;;
@@ -666,7 +666,7 @@ HOST() {
         KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0" # both tty0 and ttyS0 are useful
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         # CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
-        CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS'"
+        CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS $OPTKERNELARGS'"
     fi
 
     # store qemu pid in file
