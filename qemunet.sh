@@ -749,8 +749,9 @@ TRUNK(){
 BG() {
     # background current script! 
     # https://unix.stackexchange.com/questions/403895/automatically-move-a-script-into-the-background
-    # really portable?
-    (kill -STOP $$ ; kill -CONT $$) &
+    # FIXME: sometimes... BG fail?!
+    echo "ME=$$"
+    ( sleep 1 ; kill -STOP $$ ; ps -S --forest ; kill -CONT $$ )  &
 }
 
 ### WAIT ###
@@ -768,6 +769,11 @@ WAIT() {
     # echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     echo "sleep... press ctrl-c to end me!"
     [ $BACKGROUND -eq 1 ] && BG
+    # if [ $BACKGROUND -eq 1 ] ; then 
+    #     kill -STOP $$
+    #     kill -CONT $$
+    #     # echo "not yet stopped!"
+    #     fi 
     sleep infinity
 }
 

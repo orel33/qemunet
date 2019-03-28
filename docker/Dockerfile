@@ -13,5 +13,3 @@ RUN apt-get install -y libguestfs-tools
 
 # qemunet2
 RUN git clone https://github.com/orel33/qemunet.git -b qemunet2
-RUN cd qemunet/images && wget -q "http://aurelien.esnard.emi.u-bordeaux.fr/qemunet2/debian10.tgz" && ln -s debian10.tgz debian.tgz
-# RUN cd qemunet/images && tar xvzf debian10.tgz && rm debian10.tgz
