@@ -2,7 +2,7 @@
 QEMUNETDIR="$(realpath $(dirname $0)/..)"
 TMUXID="qemunet"
 tmux start-server
-tmux new-session -d -s $TMUXID -n console bash # tmux console
+tmux new-session -d -s $TMUXID -n console bash # tmux console #TODO: how to remove this console?
 tmux set-option -t $TMUXID -g default-shell /bin/bash
 tmux set-option -t $TMUXID -g mouse on # enable to select panes/windows  with mouse (howewer, hold shift key, to copy/paste with mouse)
 # tmux set-option -g prefix C-b

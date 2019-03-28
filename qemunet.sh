@@ -223,9 +223,9 @@ GETARGS() {
 
 CHECKRC() {
     
-    echo "QEMUNETDIR: $QEMUNETDIR"
+    echo "QEMUNET DIR: $QEMUNETDIR"
     echo "QEMU: $QEMU"
-    echo "VDE_SWITCH: $VDESWITCH"
+    echo "VDE SWITCH: $VDESWITCH"
     echo "SOCAT: $SOCAT"
     echo "WGET: $WGET"
     
@@ -366,6 +366,7 @@ INITSESSION() {
     
     ### PRINT SESSION
     echo "MODE: $MODE"
+    echo "DISPLAY: $QEMUDISPLAY"
     echo "SESSION ID: $SESSIONID"
     echo "SESSION DIRECTORY: $SESSIONDIR"
     echo "SESSION LINK: $SESSIONLINK"
@@ -479,24 +480,24 @@ else IMGCMD="$QEMUIMG rebase -q -u -b $HOSTFS $HOSTQCOW" ; fi
 
 ### SWITCH & HUB ###
 
-SWITCHDIRS=""
-SWITCHPIDS=""
-TRUNKPIDS=""
+# SWITCHDIRS=""
+# SWITCHPIDS=""
+# TRUNKPIDS=""
 
 SWITCH() {
     SWITCHNAME=$1
-    SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
+    SWITCHDIR="$SESSIONDIR/switch/$SWITCHNAME"
     # REALSESSION=$(realpath $SESSIONDIR) # !!!
     SWITCHMGMT="$SESSIONDIR/$SWITCHNAME.mgmt"
-    SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
+    # SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
     PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
     CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"
     echo "[$SWITCHNAME] $CMD"
     $CMD
-    PID=$(cat $PIDFILE)
-    SWITCHPIDS="$PID $SWITCHPIDS"
+    # PID=$(cat $PIDFILE)
+    # SWITCHPIDS="$PID $SWITCHPIDS"
     SWPORTNUM[$SWITCHNAME]=1
     if [ "$USEVLAN" -eq 1 ]; then
         # by default, only 32 ports are available! Using port numbers
@@ -514,16 +515,16 @@ SWITCH() {
 
 HUB() {
     SWITCHNAME=$1
-    SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
-    SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
+    SWITCHDIR="$SESSIONDIR/switch/$SWITCHNAME"
+    # SWITCHDIRS="$SWITCHDIR $SWITCHDIRS"
     PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
     CMD="$VDESWITCH -daemon -s $SWITCHDIR -p $PIDFILE -hub"
     echo "[$SWITCHNAME] $CMD"
     $CMD
-    PID=$(cat $PIDFILE)
-    SWITCHPIDS="$PID $SWITCHPIDS"
+    # PID=$(cat $PIDFILE)
+    # SWITCHPIDS="$PID $SWITCHPIDS"
 }
 
 ### VIRTUAL NETWORK ###
@@ -544,10 +545,10 @@ NETWORK() {
         # if [ "$USEVLAN" -eq 0 -a -n "$VLAN" ] ; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; EXIT ; fi
         # if [ "$USEVLAN" -eq 1 -a -n "$VLAN" ] ; then SWITCHNAME=$(echo $SWITCHNAME | awk -F ":" '{print $1}') ; else VLAN=0 ; fi
         # REALSESSION=$(realpath $SESSIONDIR) # !!!
-        SWITCHMGMT="$SESSIONDIR/$SWITCHNAME.mgmt"
-        SWITCHDIR="$SESSIONDIR/$SWITCHNAME"
-        SWITCHLOG="$SESSIONDIR/$SWITCHNAME.log"
-        SWITCHCMD="$SESSIONDIR/$SWITCHNAME.cmd"
+        SWITCHMGMT="$SESSIONDIR/switch/$SWITCHNAME.mgmt"
+        SWITCHDIR="$SESSIONDIR/switch/$SWITCHNAME"
+        SWITCHLOG="$SESSIONDIR/switch/$SWITCHNAME.log"
+        SWITCHCMD="$SESSIONDIR/switch/$SWITCHNAME.cmd"
         ID="$SWITCHNAME"
         # MAC=$(hexdump -n3 -e'/3 "AA:AA:AA" 3/1 ":%02X"' /dev/urandom)
         MAC=$(printf "AA:AA:AA:AA:%02x:%02x" $HOSTNUM $IFACENUM)
@@ -582,7 +583,7 @@ NETWORK() {
 
 # HOST sysname hostname switch0[:vlan0] switch1[:vlan1] ...
 
-HOSTPIDS=""
+# HOSTPIDS=""
 
 HOST() {
     SYSNAME=$1
@@ -659,8 +660,6 @@ HOST() {
     # slirp network
     if [ "$INTERNET" -eq 1 ] ; then CMD="$CMD -netdev user,id=mynet0 -device $NETDEV,netdev=mynet0" ; fi
     
-    CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
-    
     # load external linux kernel (if available)
     if [ "$HOSTSYS" = "linux" -a -r "$HOSTKERNEL" -a -r "$HOSTINITRD" ] ; then
         # append kernel args
@@ -669,7 +668,11 @@ HOST() {
         # CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS'"
     fi
-    
+
+    # store qemu pid in file
+
+    CMD="$CMD -pidfile $SESSIONDIR/$HOSTNAME.pid"
+
     ### launch qemu command with different display mode (socket, xterm, graphic)
     
     if [ "$QEMUDISPLAY" = "none" ] ; then # no display
@@ -709,12 +712,16 @@ HOST() {
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
     fi
-    
+
+    # save qemu command
+    CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
+    echo $CMD > $CMDFILE
+
     PID=$!
     
     # echo "[$HOSTNAME] pid $PID"
     # next
-    HOSTPIDS="$HOSTPIDS $PID"
+    # HOSTPIDS="$HOSTPIDS $PID"
     HOSTNUM=$(expr $HOSTNUM + 1)
 }
 
@@ -741,7 +748,8 @@ TRUNK(){
     (cd $SESSIONDIR; dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2  >& /dev/null &)
     
     PID=$!
-    TRUNKPIDS="$TRUNKPIDS $PID"
+    # TRUNKPIDS="$TRUNKPIDS $PID"
+    echo $PID > $SESSIONDIR/trunk_$SWITCH1_$SWITCH2.pid
 }
 
 ### BG ###
@@ -757,6 +765,7 @@ BG() {
 ### WAIT ###
 
 WAIT() {
+    echo "********** Waiting end of Session **********"
     # echo "ME: $$"
     # echo "wait pids: $HOSTPIDS"
     # ALLPIDS=$(jobs -rp)  # get all jobs launched by this script
@@ -768,7 +777,7 @@ WAIT() {
     # screen -ls
     # echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     echo "sleep... press ctrl-c to end me!"
-    [ $BACKGROUND -eq 1 ] && BG
+    # [ $BACKGROUND -eq 1 ] && BG
     # if [ $BACKGROUND -eq 1 ] ; then 
     #     kill -STOP $$
     #     kill -CONT $$
@@ -779,46 +788,15 @@ WAIT() {
 
 ### EXIT ###
 
-# ONEXIT=0
-
 EXIT() {
-    # if [ $ONEXIT -eq 0 ] ; then
-    #     ONEXIT=1
-    echo ; echo "=> Terminating all virtual hosts and switches"
-    # killing all
-    ALLPIDS=$(jobs -rp)  # get all jobs launched by this script
-    disown $ALLPIDS 2> /dev/null     # now, I don't care from all these background processes... so no error messages are printed by bash
-    kill $ALLPIDS 2> /dev/null
-    # kill deamons explicitly
-    if [ -n "$SWITCHPIDS" ] ; then kill -9 $SWITCHPIDS 2> /dev/null; wait $! 2> /dev/null; fi
-    if [ -n "$TRUNKPIDS" ] ; then kill -9 $TRUNKPIDS 2> /dev/null; wait $! 2> /dev/null ; fi
-    # clean session files
-    if [ -n "$SWITCHDIRS" ] ; then rm -rf $SWITCHDIRS ; fi
-    rm -f $SESSIONDIR/*.pid $SESSIONDIR/*.mgmt $SESSIONDIR/*.log
-    rm -f $LOCK
-    if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
-    if [ "$QEMUDISPLAY" = "screen" ] ; then $QEMUNETDIR/misc/screen-exit.sh ; fi
-    #     exit  # exit must nut be called here!
-    # fi
-    # echo
-    echo "********** Goodbye! **********"
+    $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR
 }
-
-# END() {
-#     echo
-#     echo "********** Goodbye! **********"
-#     EXIT
-# }
-
-### TRAP ###
-
-trap 'EXIT' EXIT
 
 ### START ###
 
 START() {
+    [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
     if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
-    
     echo "********** Let's Rock **********"
     CHECKRC
     echo "********** Loading VM Config **********"
@@ -831,9 +809,8 @@ START() {
     else
         HOST "$THESYSNAME" "$THESYSNAME"
     fi
-    echo "********** Waiting end of Session **********"
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
-    WAIT
+    [ $BACKGROUND -eq 0 ] && WAIT
     # if [ "$QEMUDISPLAY" = "socket" ] ; then
     #     echo "=> To access the QEMU console of each VM, please use the command:"
     #     echo "     $ ./connect.sh <session_dir> <vm_hostname>"
