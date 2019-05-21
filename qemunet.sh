@@ -38,7 +38,8 @@ QEMUNETCFG="$QEMUNETDIR/qemunet.cfg"
 
 SESSIONID=$(mktemp -u -d qemunet-$USER-XXXXXX)
 SESSIONDIR=""
-SESSIONLINK="session" # session link to session directory
+# SESSIONLINK="session" # session link to session directory
+SESSIONLINK="$HOME/qemunet-session" # session link to session directory
 TOPOLOGY=""
 EXTARCHIVE=""
 SESSIONARCHIVE=""
