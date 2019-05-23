@@ -21,6 +21,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+### CHECK BASH 4 ###
+
+if ! [ "$BASH_VERSINFO" -ge 4 ] ; then
+    echo "ERROR: Bash version must be greater than or equal to 4.0!"
+    exit
+fi
+
 ### QEMUNET CONFIG ###
 
 QEMUNET="$0"
@@ -244,13 +251,7 @@ CHECKRC() {
         echo "ERROR: QEMU version must be greater than or equal to 2.1!"
         exit
     fi
-    
-    # check bash version >= 4
-    if ! [ "$BASH_VERSINFO" -ge 4 ] ; then
-        echo "ERROR: Bash version must be greater than or equal to 4.0!"
-        exit
-    fi
-    
+        
     # check RC for QEMU & VDE
     if ! [ -x "$(type -P $QEMU)" ] ; then
         echo "ERROR: $QEMU not found!"
@@ -848,6 +849,5 @@ START() {
 LOGO
 GETARGS $*
 START
-
 
 # EOF
