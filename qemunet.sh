@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #### QEMUNET Release 2.0 (2019-04) ####
 #### QEMUNET Release 1.0 (2018-01) ####
