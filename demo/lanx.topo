@@ -1,0 +1,16 @@
+### LAN
+
+#                                    
+#                               opeth grave 
+#                                 \   / 
+#                                  [s1]
+#                                 /    \
+#                                syl immortal
+# 
+
+SWITCH s1
+HOST debianx  immortal s1 
+HOST debianx  opeth    s1       
+HOST debianx  syl      s1
+HOST debianx  grave    s1
+

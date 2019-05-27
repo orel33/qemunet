@@ -50,7 +50,7 @@ MODE=""  # "SESSION" or "STANDALONE"
 
 # default options
 INTERNET=0
-NOACCEL=0
+ACCEL=1
 SOCKET=0
 RAW=0
 MOUNTDIR=1
@@ -60,8 +60,9 @@ XTERM=0
 USEVLAN=0
 # RMQCOW2=0
 SWITCHTERM=0
-QEMUDISPLAY="graphic" # xterm or rxvt or tmux or graphic or socket
+QEMUDISPLAY="graphic"   # xterm or rxvt or tmux or graphic or ...
 BACKGROUND=0
+REMOTEVIEWER=0          # remote viewer for VNC or SPICE server/display
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
@@ -120,7 +121,8 @@ USAGE() {
     echo "       * xfce4: same as xterm mode, but using xfce4-terminal instead"
     echo "       * tmux: QEMU serial/text mode running within a tmux session (experimental)"
     echo "       * screen: QEMU serial/text mode running within a screen session (experimental)"
-    echo "       * vnc: QEMU VNC display (experimental)"
+    echo "       * vnc: use QEMU VNC display (experimental)"
+    echo "       * spice: use QEMU SPICE display (experimental)"
     echo "       * none: no graphic (experimental)"
     echo "More Advanced Options:"
     echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
@@ -132,6 +134,7 @@ USAGE() {
     echo "    -k: enable an accelerator: kvm, hvf (default)"
     echo "    -K: disable accelerator (not recommanded, too slow)"
     echo "    -v: enable VLAN support"
+    echo "    -V: start remote viewer(s) for VNC or SPICE display mode"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
@@ -141,7 +144,7 @@ USAGE() {
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hbz:" OPT; do
+    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hbz:V" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -201,13 +204,16 @@ GETARGS() {
                 SWITCHTERM=1
             ;;
             k)
-                NOACCEL=0
+                ACCEL=1
             ;;
             K)
-                NOACCEL=1
+                ACCEL=0
             ;;
             v)
                 USEVLAN=1
+            ;;
+            V)
+                REMOTEVIEWER=1
             ;;
             b)
                 BACKGROUND=1
@@ -282,7 +288,7 @@ CHECKRC() {
     fi
     
     # check accelerator (test working only on Linux & MacOS system)
-    if [ "$NOACCEL" -eq 0 ] ; then
+    if [ $ACCEL -eq 1 ] ; then
         # Other solution: lscpu | grep Virtualization
         if [[ "$OSTYPE" == "linux"* ]] ; then
             # TODO: QEMU: Checking if device /dev/kvm exists : PASS
@@ -320,7 +326,15 @@ CHECKRC() {
         which virsh &> /dev/null
         [ $? -ne 0 ] && echo "ERROR: virsh not found, but required for -m option!" && exit
     fi
-    
+
+    # check remote-viewer for VNC or SPICE display mode
+    if [ $REMOTEVIEWER -eq 1 ] ; then
+        if ! [ -x  "$(type -P remote-viewer)" ] ; then
+            echo "ERROR: remote-viewer not found (only useful for VNC or SPICE display)!"
+            exit
+        fi
+    fi
+
     # check libguestfs-tools for -C option
     # if [ $COPYIN -eq 1 ] ; then
     #     which virt-copy-in &> /dev/null
@@ -617,8 +631,8 @@ HOST() {
     CMD="$QEMU -name $HOSTNAME -rtc base=localtime"
     
     # accelerator option (by default)
-    # if [ "$NOACCEL" -eq 0 ] ; then CMD="$CMD -enable-kvm" ; fi
-    if [ "$NOACCEL" -eq 0 ] ; then CMD="$CMD -M accel=kvm:hax:hvf -cpu host" ; fi
+    # if [ $ACCEL -eq 1 ] ; then CMD="$CMD -enable-kvm" ; fi
+    if [ $ACCEL -eq 1 ] ; then CMD="$CMD -M accel=kvm:hax:hvf -cpu host" ; fi
     
     # specific QEMU options
     CMD="$CMD $HOSTOPT"
@@ -693,17 +707,6 @@ HOST() {
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}"
-        # elif [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
-        #     # bug: with this option, any ctrl-c (SIGINT) in VM will kill all qemu session!
-        #     # solution: use socat in raw mode with escape option!
-        #     CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"
-        #     # redirect both qemu monitor & console in two Unix sockets, that can be connected with socat
-        #     # $ socat stdin,raw,echo=0 unix-connect:session/<hostname>.sock
-        #     CMD="$CMD -serial unix:$SESSIONDIR/$HOSTNAME.sock,server" # wait client connection, else use "nowait" option
-        #     # CMD="$CMD -nographic"
-        #     CMD="$CMD -display none"
-        #     echo "[$HOSTNAME] $CMD"
-        #     bash -c "${CMD[@]}" &
     # screen
     elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
         CMD="$CMD -nographic"
@@ -724,9 +727,22 @@ HOST() {
         $XCMD "${CMD[@]}" &
     # vnc
     elif [ "$QEMUDISPLAY" = "vnc" ] ; then
-        CMD="$CMD -vnc :$HOSTNUM"
+        VNCPORT=5900            # default port for VNC
+        ((VNCPORT+=HOSTNUM))
+        CMD="$CMD -vnc :$HOSTNUM -usb -device usb-tablet"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
+        [ $REMOTEVIEWER -eq 1 ] && remote-viewer vnc://localhost:$VNCPORT &
+    # spice
+    elif [ "$QEMUDISPLAY" = "spice" ] ; then
+        SPICEPORT=5900
+        ((SPICEPORT+=HOSTNUM))
+        CMD="$CMD -vga qxl -spice port=$SPICEPORT,addr=127.0.0.1,disable-ticketing"
+        SPICEOPT="-device virtio-serial -chardev spicevmc,id=vdagent,name=vdagent -device virtserialport,chardev=vdagent,name=com.redhat.spice.0"
+        CMD="$CMD $SPICEOPT"
+        echo "[$HOSTNAME] $CMD"
+        bash -c "${CMD[@]}" &
+        [ $REMOTEVIEWER -eq 1 ] && remote-viewer spice://localhost:$SPICEPORT &
     # standard / graphic mode
     else
         echo "[$HOSTNAME] $CMD"
