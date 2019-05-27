@@ -25,7 +25,7 @@
 
 if ! [ "$BASH_VERSINFO" -ge 4 ] ; then
     echo "ERROR: Bash version must be greater than or equal to 4.0!"
-    exit
+    exit 1
 fi
 
 ### QEMUNET CONFIG ###
@@ -46,12 +46,11 @@ THESYSNAME=""
 OPTKERNELARGS=""
 
 # mode
-MODE=""  # "SESSION" or "STANDALONE"
+MODE=""  # "SESSION" or "STANDALONE" or "DOWNLOAD"
 
 # default options
 INTERNET=0
 ACCEL=1
-SOCKET=0
 RAW=0
 MOUNTDIR=1
 MOUNTDISK=1
@@ -126,6 +125,7 @@ USAGE() {
     echo "       * none: no graphic (experimental)"
     echo "More Advanced Options:"
     echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
+    echo "    -D <sysname>: download system image if URL is provided in config file"
     echo "    -b: run qemunet as a background command"
     echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)"
     echo "    -M: disable mount directory"
@@ -138,13 +138,13 @@ USAGE() {
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
-    exit
+    exit 0
 }
 
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hbz:V" OPT; do
+    while getopts "t:a:s:S:c:l:D:imMfFkKxyvd:hbz:V" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -171,6 +171,11 @@ GETARGS() {
                 INTERNET=1
                 SESSIONDIR="/tmp/$SESSIONID"
                 mkdir -p $SESSIONDIR
+                THESYSNAME="$OPTARG"
+            ;;
+            D)
+                if [ -n "$MODE" ] ; then USAGE ; fi
+                MODE="DOWNLOAD"
                 THESYSNAME="$OPTARG"
             ;;
             c)
@@ -252,38 +257,38 @@ CHECKRC() {
     
     if [ "$QEMUMAJOR" -lt "2" ] ; then
         echo "ERROR: QEMU version must be greater than or equal to 2.1!"
-        exit
+        exit 1
     elif [ "$QEMUMAJOR" -eq "2" -a "$QEMUMINOR" -lt "1" ]
     then
         echo "ERROR: QEMU version must be greater than or equal to 2.1!"
-        exit
+        exit 1
     fi
         
     # check RC for QEMU & VDE
     if ! [ -x "$(type -P $QEMU)" ] ; then
         echo "ERROR: $QEMU not found!"
-        exit
+        exit 1
     elif ! [ -x "$(type -P $QEMUIMG)" ]
     then
         echo "ERROR: $QEMUIMG not found!"
-        exit
+        exit 1
     elif ! [ -x  "$(type -P $VDESWITCH)" ]
     then
         echo "ERROR: $VDESWITCH not found!"
-        exit
+        exit 1
     fi
     
     # check wget
     if ! [ -x  "$(type -P $WGET)" ] ; then
         echo "ERROR: $WGET not found: download system images by yourself!"
-        exit
+        exit 1
     fi
     
     # check socat for VLAN support
     if [ "$USEVLAN" -eq 1 ] ; then
         if ! [ -x  "$(type -P $SOCAT)" ] ; then
             echo "ERROR: $SOCAT not found (only required for VLAN support)!"
-            exit
+            exit 1
         fi
     fi
     
@@ -304,7 +309,7 @@ CHECKRC() {
                 echo "Accelerator: KVM enabled (amd)"
             else
                 echo "ERROR: Accelerator not available for QEMU!"
-                exit
+                exit 1
             fi
         elif [[ "$OSTYPE" == "darwin"* ]] ; then
             # TODO: what to check?
@@ -324,21 +329,21 @@ CHECKRC() {
     # check libvirt0 and libvirt-clients for -m option
     if [ $MOUNTDIR -eq 1 ] ; then
         which virsh &> /dev/null
-        [ $? -ne 0 ] && echo "ERROR: virsh not found, but required for -m option!" && exit
+        [ $? -ne 0 ] && echo "ERROR: virsh not found, but required for -m option!" && exit 1
     fi
 
     # check remote-viewer for VNC or SPICE display mode
     if [ $REMOTEVIEWER -eq 1 ] ; then
         if ! [ -x  "$(type -P remote-viewer)" ] ; then
             echo "ERROR: remote-viewer not found (only useful for VNC or SPICE display)!"
-            exit
+            exit 1
         fi
     fi
 
     # check libguestfs-tools for -C option
     # if [ $COPYIN -eq 1 ] ; then
     #     which virt-copy-in &> /dev/null
-    #     [ $? -ne 0 ] && echo "ERROR: virt-copy-in not found, but required for -C option!" && exit
+    #     [ $? -ne 0 ] && echo "ERROR: virt-copy-in not found, but required for -C option!" && exit 1
     # fi
     
 }
@@ -346,26 +351,30 @@ CHECKRC() {
 ### 2) INIT SESSION ###
 
 INITSESSION() {
-    
+
+    echo "********** Starting QemuNet Session **********"
+
+    ### special tmux init
+    if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
+
     ### init session directory
-    
     if [ -z "$SESSIONDIR" ] ; then SESSIONDIR="/tmp/$SESSIONID" ; mkdir -p $SESSIONDIR ; fi
-    if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory \"$SESSIONDIR\" does not exist!" ; exit ; fi
-    if ! [ -w "$SESSIONDIR" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONDIR\"!" ; exit ; fi
+    if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory \"$SESSIONDIR\" does not exist!" ; exit 1 ; fi
+    if ! [ -w "$SESSIONDIR" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONDIR\"!" ; exit 1 ; fi
     
     # SESSIONLINKDIR=$(dirname $SESSIONDIR)
     # if ! [ -w "$SESSIONLINKDIR" ] ; then echo "ERROR: Write access is not granted in directory \"$SESSIONLINKDIR\" for session link!" ; exit ; fi
     # ln -T -sf $SESSIONDIR $SESSIONLINK  # -T means no target directory
-    # if ! [ -d "$SESSIONLINK" ] ; then echo "ERROR: Session directory link \"$SESSIONLINK\" does not exist!" ; exit ; fi
-    # if ! [ -w "$SESSIONLINK" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONLINK\"!" ; exit ; fi
+    # if ! [ -d "$SESSIONLINK" ] ; then echo "ERROR: Session directory link \"$SESSIONLINK\" does not exist!" ; exit 1 ; fi
+    # if ! [ -w "$SESSIONLINK" ] ; then echo "ERROR: Write access is not granted in \"$SESSIONLINK\"!" ; exit 1 ; fi
     ln -T -sf $SESSIONDIR $SESSIONLINK &> /dev/null || echo "WARNING: unable to create session link \"$SESSIONLINK\" in working directory!"
     
     if [ "$MODE" = "SESSION" ] ; then
         
         ### check session input param
-        if [ -n "$TOPOLOGY" -a ! -r "$TOPOLOGY" ] ; then echo "ERROR: Topology file $TOPOLOGY not found!" ; exit ; fi
-        if [ -n "$EXTARCHIVE" -a ! -r "$EXTARCHIVE" ] ; then echo "ERROR: Extra archive $EXTARCHIVE not found!" ; exit ; fi
-        if [ -n "$SESSIONARCHIVE" -a ! -r "$SESSIONARCHIVE" ] ; then echo "ERROR: Session archive $SESSIONARCHIVE not found!" ; exit ; fi
+        if [ -n "$TOPOLOGY" -a ! -r "$TOPOLOGY" ] ; then echo "ERROR: Topology file $TOPOLOGY not found!" ; exit 1 ; fi
+        if [ -n "$EXTARCHIVE" -a ! -r "$EXTARCHIVE" ] ; then echo "ERROR: Extra archive $EXTARCHIVE not found!" ; exit 1 ; fi
+        if [ -n "$SESSIONARCHIVE" -a ! -r "$SESSIONARCHIVE" ] ; then echo "ERROR: Session archive $SESSIONARCHIVE not found!" ; exit 1 ; fi
         
         ### prepare session files from input param
         if [ -r "$TOPOLOGY" ] ; then cp $TOPOLOGY $SESSIONDIR/topology ; fi
@@ -376,8 +385,8 @@ INITSESSION() {
         TOPOLOGY="$SESSIONDIR/topology"
         
         # check
-        if ! [ -r "$TOPOLOGY" ] ; then echo "ERROR: Topology file $TOPOLOGY missing!" ; exit ; fi
-        if ! [ -r "$QEMUNETCFG" ] ; then echo "ERROR: Config file $QEMUNETCFG missing!" ; exit ; fi
+        if ! [ -r "$TOPOLOGY" ] ; then echo "ERROR: Topology file $TOPOLOGY missing!" ; exit 1 ; fi
+        if ! [ -r "$QEMUNETCFG" ] ; then echo "ERROR: Config file $QEMUNETCFG missing!" ; exit 1 ; fi
         
     fi
     
@@ -385,7 +394,7 @@ INITSESSION() {
     LOCK="$SESSIONDIR/lock"
     if [ -e "$LOCK" ] ; then
         echo "ERROR: Session Locked! Try to remove $LOCK file before restarting."
-        exit
+        exit 1
     else
         touch $LOCK
     fi
@@ -420,7 +429,7 @@ LOADCONF() {
         source $QEMUNETCFG
     else
         echo "ERROR: File $QEMUNETCFG is missing!"
-        exit
+        exit 1
     fi
     
     # PRINT VM CONF
@@ -461,17 +470,20 @@ LOADCONF() {
 ### DOWNLOAD SYSTEM IMAGE ###
 
 DOWNLOAD() {
-    
+
     SYSNAME=$1
-    
     HOSTFS="${FS[$SYSNAME]}"
+    [ -z "$HOSTFS" ] && echo "ERROR: invalid config provided for \"$SYSNAME\"!" && exit 1
     HOSTFSDIR=$(dirname  $HOSTFS)
     HOSTFSTGZ="$HOSTFSDIR/$SYSNAME.tgz"
     HOSTURL=${URL[$SYSNAME]}
-    
+
     # FS OK
-    if [ -r "$HOSTFS" ] ; then return; fi
-    
+    if [ -r "$HOSTFS" ] ; then 
+        echo "=> Image for \"$SYSNAME\" already downloaded :-)"
+        return 
+    fi
+
     # Download disk image
     if [ ${URL[$SYSNAME]+_} ] ; then
         # if [ ! -r "$HOSTFSTGZ" ] ; then
@@ -479,8 +491,8 @@ DOWNLOAD() {
         $WGET --continue --show-progress -q -nc $HOSTURL -O $HOSTFSTGZ
         #fi
     else
-        echo "ERROR: Raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system and no URL provided to download it!"
-        EXIT
+        echo "ERROR: raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system and no URL provided to download it!"
+        exit 1
     fi
     
     # Uncompress disk image
@@ -568,7 +580,7 @@ NETWORK() {
     for SWITCHNAME in $SWITCHNAMES ; do
         # test if VLAN is used?
         # VLAN=$(echo $SWITCHNAME | awk -F ":" '{print $2}')  # get VLAN tag
-        # if [ "$USEVLAN" -eq 0 -a -n "$VLAN" ] ; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; EXIT ; fi
+        # if [ "$USEVLAN" -eq 0 -a -n "$VLAN" ] ; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; exit 1 ; fi
         # if [ "$USEVLAN" -eq 1 -a -n "$VLAN" ] ; then SWITCHNAME=$(echo $SWITCHNAME | awk -F ":" '{print $1}') ; else VLAN=0 ; fi
         # REALSESSION=$(realpath $SESSIONDIR) # !!!
         SWITCHMGMT="$SESSIONDIR/switch/$SWITCHNAME.mgmt"
@@ -608,9 +620,6 @@ NETWORK() {
 ### VIRTUAL HOST ###
 
 # HOST sysname hostname switch0[:vlan0] switch1[:vlan1] ...
-
-# HOSTPIDS=""
-
 HOST() {
     SYSNAME=$1
     HOSTNAME=$2
@@ -618,6 +627,7 @@ HOST() {
     SWITCHNAMES=$*
     
     HOSTFS="${FS[$SYSNAME]}"
+    [ -z "$HOSTFS" ] && echo "ERROR: Invalid config provided for \"$SYSNAME\"!" && exit 1
     HOSTOPT="${QEMUOPT[$SYSNAME]}"
     HOSTSYS="${SYS[$SYSNAME]}"
     HOSTKERNEL="${KERNEL[$SYSNAME]}"
@@ -625,7 +635,7 @@ HOST() {
     HOSTQCOW="$SESSIONDIR/$HOSTNAME.qcow2"
     
     # check SESSIONDIR
-    if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory $SESSIONDIR does not exist!" ; EXIT ; fi
+    if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory $SESSIONDIR does not exist!" ; exit 1 ; fi
     
     # basic options
     CMD="$QEMU -name $HOSTNAME -rtc base=localtime"
@@ -639,7 +649,7 @@ HOST() {
     
     # check system image file
     if ! [ -r "$HOSTFS" ] ; then DOWNLOAD $SYSNAME ; fi
-    if ! [ -r "$HOSTFS" ] ; then echo "ERROR: Raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system!"; EXIT ; fi
+    if ! [ -r "$HOSTFS" ] ; then echo "ERROR: Raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system!"; exit 1 ; fi
     
     # use raw or qcow2 system image
     if [ "$RAW" -eq 1 ] ; then
@@ -649,7 +659,7 @@ HOST() {
         # ln -sf $HOSTFS $SESSIONDIR/$HOSTNAME.img
         # create qcow2 if needed
         CREATEQCOW $HOSTFS $HOSTQCOW
-        if ! [ -r "$HOSTQCOW" ] ; then echo "ERROR: qcow2 image file $HOSTQCOW not found!"; EXIT ; fi
+        if ! [ -r "$HOSTQCOW" ] ; then echo "ERROR: qcow2 image file $HOSTQCOW not found!"; exit 1 ; fi
         # CMD="$CMD -hda $HOSTQCOW" # using qcow2 image file (raw not modified)
         CMD="$CMD -drive file=$HOSTQCOW,format=qcow2,index=0,media=disk"
         # add extra disk in VM (/dev/sdb)
@@ -766,14 +776,14 @@ HOST() {
 
 TRUNK(){
     
-    if [ "$USEVLAN" -eq 0 ]; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; EXIT ; fi
-    if [ $# -ne 2 ]; then echo "ERROR: Trunk link can be used only between 2 switches"; EXIT ; fi;
+    if [ "$USEVLAN" -eq 0 ]; then echo "ERROR: VLAN used in topology, but VLAN support not enabled (option -v)!" ; exit 1 ; fi
+    if [ $# -ne 2 ]; then echo "ERROR: Trunk link can be used only between 2 switches"; exit 1 ; fi;
     
     SWITCH1=$1
     SWITCH2=$2
     
-    if ! [ -f  $SESSIONDIR/$SWITCH1.pid ]; then "ERROR: Unknown switch $SWITCH1 !" ; EXIT ; fi
-    if ! [ -f  $SESSIONDIR/$SWITCH2.pid ]; then "ERROR: Unknown switch $SWITCH2 !" ; EXIT ; fi
+    if ! [ -f  $SESSIONDIR/$SWITCH1.pid ]; then "ERROR: Unknown switch $SWITCH1 !" ; exit 1 ; fi
+    if ! [ -f  $SESSIONDIR/$SWITCH2.pid ]; then "ERROR: Unknown switch $SWITCH2 !" ; exit 1 ; fi
     
     echo "=> Trunk link between switch $SWITCH1 and switch $SWITCH2"
     
@@ -802,7 +812,7 @@ BG() {
 ### WAIT ###
 
 WAIT() {
-    echo "********** Waiting end of Session **********"
+    echo "* ********* Waiting end of Session **********"
     # echo "ME: $$"
     # echo "wait pids: $HOSTPIDS"
     # ALLPIDS=$(jobs -rp)  # get all jobs launched by this script
@@ -827,34 +837,36 @@ WAIT() {
 ### EXIT ###
 
 EXIT() {
-    $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR
+    source $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR
 }
 
 ### START ###
 
 START() {
-    [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
-    if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
     echo "********** Let's Rock **********"
     CHECKRC
     echo "********** Loading VM Config **********"
     LOADCONF
-    echo "********** Init Session **********"
-    INITSESSION
-    echo "********** Starting Session with Given Topology **********"
+    # echo "********** Init Session **********"
     if [ "$MODE" = "SESSION" ] ; then
+        [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
+        INITSESSION
         source $TOPOLOGY
-    else
+    elif [ "$MODE" = "STANDALONE" ] ; then
+        [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
+        INITSESSION
         HOST "$THESYSNAME" "$THESYSNAME"
+    elif [ "$MODE" = "DOWNLOAD" ] ; then
+        DOWNLOAD "$THESYSNAME" && exit 0
+    else
+        echo "ERROR: Invalid QemuNet mode \"$MODE\"!"
     fi
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
     [ $BACKGROUND -eq 0 ] && WAIT
-    # if [ "$QEMUDISPLAY" = "socket" ] ; then
-    #     echo "=> To access the QEMU console of each VM, please use the command:"
-    #     echo "     $ ./connect.sh <session_dir> <vm_hostname>"
-    # fi
+
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
+
     # if [ "$QEMUDISPLAY" = "tmux" ] ; then
     #     # $QEMUNETDIR/misc/tmux-attach.sh
     #     # sleep 900

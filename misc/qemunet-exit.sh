@@ -1,6 +1,6 @@
 #!/bin/bash
 
-[ $# -ne 1 ] && echo "$0 <path/to/session/dir>" && exit
+[ $# -ne 1 ] && echo "Usage: $0 <path/to/session/dir>" && exit
 SESSIONDIR=$1
 [ ! -e $SESSIONDIR ] && echo "Error: session directory not found!" && exit 0
 LOCK="$SESSIONDIR/lock"
