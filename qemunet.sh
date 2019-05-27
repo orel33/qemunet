@@ -617,7 +617,7 @@ HOST() {
     
     # accelerator option (by default)
     # if [ "$NOACCEL" -eq 0 ] ; then CMD="$CMD -enable-kvm" ; fi
-    if [ "$NOACCEL" -eq 0 ] ; then CMD="$CMD -M accel=kvm:hax:hvf" ; fi
+    if [ "$NOACCEL" -eq 0 ] ; then CMD="$CMD -M accel=kvm:hax:hvf -cpu host" ; fi
     
     # specific QEMU options
     CMD="$CMD $HOSTOPT"
