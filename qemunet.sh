@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #### QEMUNET Release 2.0 (2019-04) ####
 #### QEMUNET Release 1.0 (2018-01) ####
@@ -50,7 +50,7 @@ MODE=""  # "SESSION" or "STANDALONE"
 
 # default options
 INTERNET=0
-NOKVM=0
+NOACCEL=0
 SOCKET=0
 RAW=0
 MOUNTDIR=1
@@ -128,8 +128,8 @@ USAGE() {
     echo "    -M: disable mount directory"
     echo "    -f: mount extra disk <session directory>/<hostname>.disk (default)"
     echo "    -F: disable mount disk"
-    echo "    -k: enable KVM full virtualization support (default)"
-    echo "    -K: disable KVM full virtualization support (not recommanded)"
+    echo "    -k: enable an accelerator: kvm, hvf (default)"
+    echo "    -K: disable accelerator (not recommanded, too slow)"
     echo "    -v: enable VLAN support"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable qemu Slirp interface for Internet access (ping not allowed)"
@@ -200,10 +200,10 @@ GETARGS() {
                 SWITCHTERM=1
             ;;
             k)
-                NOKVM=0
+                NOACCEL=0
             ;;
             K)
-                NOKVM=1
+                NOACCEL=1
             ;;
             v)
                 USEVLAN=1
@@ -280,24 +280,33 @@ CHECKRC() {
         fi
     fi
     
-    # check KVM (test working only on Linux system)
-    if [ "$NOKVM" -eq 0 ] ; then
+    # check accelerator (test working only on Linux & MacOS system)
+    if [ "$NOACCEL" -eq 0 ] ; then
         # Other solution: lscpu | grep Virtualization
-        INTELCPUFLAGS=$(grep -c "vmx" /proc/cpuinfo)
-        AMDCPUFLAGS=$(grep -c "svm" /proc/cpuinfo)
-        INTELKVMMOD=$(lsmod | grep -c "kvm_intel")
-        AMDKVMMOD=$(lsmod | grep -c "kvm_amd")
-        if [ "$INTELCPUFLAGS" -ge 1 -a "$INTELKVMMOD" -ge 1 ] ; then
-            echo "KVM: enabled (intel)"
-        elif [ "$AMDCPUFLAGS" -ge 1 -a "$AMDKVMMOD" -ge 1 ]
-        then
-            echo "KVM: enabled (amd)"
+        if [[ "$OSTYPE" == "linux"* ]] ; then
+            # TODO: QEMU: Checking if device /dev/kvm exists : PASS
+            # TODO: QEMU: Checking if device /dev/kvm is accessible : PASS
+            INTELCPUFLAGS=$(grep -c "vmx" /proc/cpuinfo)
+            AMDCPUFLAGS=$(grep -c "svm" /proc/cpuinfo)
+            INTELKVMMOD=$(lsmod | grep -c "kvm_intel")
+            AMDKVMMOD=$(lsmod | grep -c "kvm_amd")
+            if [ "$INTELCPUFLAGS" -ge 1 -a "$INTELKVMMOD" -ge 1 ] ; then
+                echo "Accelerator: KVM enabled (intel)"
+            elif [ "$AMDCPUFLAGS" -ge 1 -a "$AMDKVMMOD" -ge 1 ]
+            then
+                echo "Accelerator: KVM enabled (amd)"
+            else
+                echo "ERROR: Accelerator not available for QEMU!"
+                exit
+            fi
+        elif [[ "$OSTYPE" == "darwin"* ]] ; then
+            # TODO: what to check?
+            echo "Accelerator: HVF enabled (maybe?)"
         else
-            echo "ERROR: KVM not available for QEMU!" # TODO also check module permissions!
-            exit
+            echo "Accelerator: not yet supported :-("
         fi
     else
-        echo "KVM: disabled (not recommanded)"
+        echo "ERROR: Accelerator not available for QEMU!"
     fi
     
     # using virt-manager
@@ -606,8 +615,9 @@ HOST() {
     # basic options
     CMD="$QEMU -name $HOSTNAME -rtc base=localtime"
     
-    # kvm option (by default)
-    if [ "$NOKVM" -eq 0 ] ; then CMD="$CMD -enable-kvm" ; fi
+    # accelerator option (by default)
+    # if [ "$NOACCEL" -eq 0 ] ; then CMD="$CMD -enable-kvm" ; fi
+    if [ "$NOACCEL" -eq 0 ] ; then CMD="$CMD -M accel=kvm:hvf" ; fi
     
     # specific QEMU options
     CMD="$CMD $HOSTOPT"
@@ -785,7 +795,8 @@ WAIT() {
     #     kill -CONT $$
     #     # echo "not yet stopped!"
     #     fi 
-    sleep infinity
+
+    while true; do sleep 1000; done
 }
 
 ### EXIT ###
