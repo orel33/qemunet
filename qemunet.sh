@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #### QEMUNET Release 2.0 (2019-04) ####
 #### QEMUNET Release 1.0 (2018-01) ####
@@ -282,19 +282,23 @@ CHECKRC() {
     
     # check KVM (test working only on Linux system)
     if [ "$NOKVM" -eq 0 ] ; then
-        # Other solution: lscpu | grep Virtualization
-        INTELCPUFLAGS=$(grep -c "vmx" /proc/cpuinfo)
-        AMDCPUFLAGS=$(grep -c "svm" /proc/cpuinfo)
-        INTELKVMMOD=$(lsmod | grep -c "kvm_intel")
-        AMDKVMMOD=$(lsmod | grep -c "kvm_amd")
-        if [ "$INTELCPUFLAGS" -ge 1 -a "$INTELKVMMOD" -ge 1 ] ; then
-            echo "KVM: enabled (intel)"
-        elif [ "$AMDCPUFLAGS" -ge 1 -a "$AMDKVMMOD" -ge 1 ]
-        then
-            echo "KVM: enabled (amd)"
+           if [[ "$OSTYPE" == "darwin"* ]] ; then
+            echo "accel=hvf enabled (macos)"
         else
-            echo "ERROR: KVM not available for QEMU!" # TODO also check module permissions!
-            exit
+            # Other solution: lscpu | grep Virtualization
+            INTELCPUFLAGS=$(grep -c "vmx" /proc/cpuinfo)
+            AMDCPUFLAGS=$(grep -c "svm" /proc/cpuinfo)
+            INTELKVMMOD=$(lsmod | grep -c "kvm_intel")
+            AMDKVMMOD=$(lsmod | grep -c "kvm_amd")
+            if [ "$INTELCPUFLAGS" -ge 1 -a "$INTELKVMMOD" -ge 1 ] ; then
+                echo "KVM: enabled (intel)"
+            elif [ "$AMDCPUFLAGS" -ge 1 -a "$AMDKVMMOD" -ge 1 ]
+            then
+                echo "KVM: enabled (amd)"
+            else
+                echo "ERROR: KVM not available for QEMU!" # TODO also check module permissions!
+                exit
+            fi
         fi
     else
         echo "KVM: disabled (not recommanded)"
@@ -607,7 +611,13 @@ HOST() {
     CMD="$QEMU -name $HOSTNAME -rtc base=localtime"
     
     # kvm option (by default)
-    if [ "$NOKVM" -eq 0 ] ; then CMD="$CMD -enable-kvm" ; fi
+    if [ "$NOKVM" -eq 0 ] ; then
+        if [[ "$OSTYPE" == "darwin"* ]] ; then
+            CMD="$CMD -M accel=hvf --cpu host"
+        else
+            CMD="$CMD -enable-kvm"
+        fi
+    fi
     
     # specific QEMU options
     CMD="$CMD $HOSTOPT"
@@ -757,7 +767,7 @@ TRUNK(){
 ### BG ###
 
 BG() {
-    # background current script! 
+    # background current script!
     # https://unix.stackexchange.com/questions/403895/automatically-move-a-script-into-the-background
     # FIXME: sometimes... BG fail?!
     echo "ME=$$"
@@ -774,18 +784,22 @@ WAIT() {
     # echo "HOST PIDS: $HOSTPIDS"  # empty for tmux or screen display mode!
     # echo "ALL PIDS: $ALLPIDS"
     # echo "SWITCH PIDS: $SWITCHPIDS"
-    
+
     # wait $HOSTPIDS  # only wait hosts (not switch, etc)
     # screen -ls
     # echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     echo "sleep... press ctrl-c to end me!"
     # [ $BACKGROUND -eq 1 ] && BG
-    # if [ $BACKGROUND -eq 1 ] ; then 
+    # if [ $BACKGROUND -eq 1 ] ; then
     #     kill -STOP $$
     #     kill -CONT $$
     #     # echo "not yet stopped!"
-    #     fi 
-    sleep infinity
+    #     fi
+    if [[ "$OSTYPE" == "darwin"* ]] ; then
+        while true; do sleep 1000; done
+    else
+        sleep infinity
+    fi
 }
 
 ### EXIT ###
