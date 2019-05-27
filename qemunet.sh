@@ -124,8 +124,9 @@ USAGE() {
     echo "       * spice: use QEMU SPICE display (experimental)"
     echo "       * none: no graphic (experimental)"
     echo "More Advanced Options:"
-    echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
-    echo "    -D <sysname>: download system image if URL is provided in config file"
+    echo "    -l <sysname>: launch a VM in standalone mode to test it..."
+    echo "    -L <sysname>: launch a VM in standalone mode using raw disk image (warning: image will be modified)"
+    echo "    -D <sysname>: download system image from URL provided in config file"
     echo "    -b: run qemunet as a background command"
     echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)"
     echo "    -M: disable mount directory"
@@ -144,7 +145,7 @@ USAGE() {
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:D:imMfFkKxyvd:hbz:V" OPT; do
+    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:V" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -167,8 +168,14 @@ GETARGS() {
             l)
                 if [ -n "$MODE" ] ; then USAGE ; fi
                 MODE="STANDALONE"
+                SESSIONDIR="/tmp/$SESSIONID"
+                mkdir -p $SESSIONDIR
+                THESYSNAME="$OPTARG"
+            ;;
+            L)
+                if [ -n "$MODE" ] ; then USAGE ; fi
+                MODE="STANDALONE"
                 RAW=1
-                INTERNET=1
                 SESSIONDIR="/tmp/$SESSIONID"
                 mkdir -p $SESSIONDIR
                 THESYSNAME="$OPTARG"
