@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #### QEMUNET Release 2.0 (2019-04) ####
 #### QEMUNET Release 1.0 (2018-01) ####
@@ -38,8 +38,7 @@ QEMUNETCFG="$QEMUNETDIR/qemunet.cfg"
 
 SESSIONID=$(mktemp -u -d qemunet-$USER-XXXXXX)
 SESSIONDIR=""
-# SESSIONLINK="session" # session link to session directory
-SESSIONLINK="$HOME/qemunet-session" # session link to session directory
+SESSIONLINK="session" # session link to session directory
 TOPOLOGY=""
 EXTARCHIVE=""
 SESSIONARCHIVE=""
@@ -51,7 +50,7 @@ MODE=""  # "SESSION" or "STANDALONE"
 
 # default options
 INTERNET=0
-NOKVM=0
+ACCEL=1
 SOCKET=0
 RAW=0
 MOUNTDIR=1
@@ -61,8 +60,9 @@ XTERM=0
 USEVLAN=0
 # RMQCOW2=0
 SWITCHTERM=0
-QEMUDISPLAY="graphic" # xterm or rxvt or tmux or graphic or socket
+QEMUDISPLAY="graphic"   # xterm or rxvt or tmux or graphic or ...
 BACKGROUND=0
+REMOTEVIEWER=0          # remote viewer for VNC or SPICE server/display
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
@@ -114,13 +114,15 @@ USAGE() {
     echo "    -c <config>: load system config file (default is qemunet.cfg)"
     echo "    -x: launch VM in xterm terminal (only for linux system running on ttyS0)"
     echo "    -d <display>: launch VM with special display mode: "
-    echo "       * graphic: standard qemu display mode (default mode)"
-    echo "       * xterm: qemu serial/text mode running within xterm (same as -x option)"
+    echo "       * graphic: standard QEMU display mode (default mode)"
+    echo "       * xterm: QEMU serial/text mode running within xterm (same as -x option)"
     echo "       * rxvt: same as xterm mode, but using rxvt instead"
     echo "       * gnome: same as xterm mode, but using gnome-terminal instead"
     echo "       * xfce4: same as xterm mode, but using xfce4-terminal instead"
-    echo "       * tmux: qemu serial/text mode running within a tmux session (experimental)"
-    echo "       * screen: qemu serial/text mode running within a screen session (experimental)"
+    echo "       * tmux: QEMU serial/text mode running within a tmux session (experimental)"
+    echo "       * screen: QEMU serial/text mode running within a screen session (experimental)"
+    echo "       * vnc: use QEMU VNC display (experimental)"
+    echo "       * spice: use QEMU SPICE display (experimental)"
     echo "       * none: no graphic (experimental)"
     echo "More Advanced Options:"
     echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
@@ -129,11 +131,12 @@ USAGE() {
     echo "    -M: disable mount directory"
     echo "    -f: mount extra disk <session directory>/<hostname>.disk (default)"
     echo "    -F: disable mount disk"
-    echo "    -k: enable KVM full virtualization support (default)"
-    echo "    -K: disable KVM full virtualization support (not recommanded)"
+    echo "    -k: enable an accelerator: kvm, hvf (default)"
+    echo "    -K: disable accelerator (not recommanded, too slow)"
     echo "    -v: enable VLAN support"
+    echo "    -V: start remote viewer(s) for VNC or SPICE display mode"
     echo "    -y: launch VDE switch management console in terminal"
-    echo "    -i: enable qemu Slirp interface for Internet access (ping not allowed)"
+    echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
     exit
 }
@@ -141,7 +144,7 @@ USAGE() {
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hbz:" OPT; do
+    while getopts "t:a:s:S:c:l:imMfFkKxyvd:hbz:V" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -201,13 +204,16 @@ GETARGS() {
                 SWITCHTERM=1
             ;;
             k)
-                NOKVM=0
+                ACCEL=1
             ;;
             K)
-                NOKVM=1
+                ACCEL=0
             ;;
             v)
                 USEVLAN=1
+            ;;
+            V)
+                REMOTEVIEWER=1
             ;;
             b)
                 BACKGROUND=1
@@ -281,24 +287,33 @@ CHECKRC() {
         fi
     fi
     
-    # check KVM (test working only on Linux system)
-    if [ "$NOKVM" -eq 0 ] ; then
+    # check accelerator (test working only on Linux & MacOS system)
+    if [ $ACCEL -eq 1 ] ; then
         # Other solution: lscpu | grep Virtualization
-        INTELCPUFLAGS=$(grep -c "vmx" /proc/cpuinfo)
-        AMDCPUFLAGS=$(grep -c "svm" /proc/cpuinfo)
-        INTELKVMMOD=$(lsmod | grep -c "kvm_intel")
-        AMDKVMMOD=$(lsmod | grep -c "kvm_amd")
-        if [ "$INTELCPUFLAGS" -ge 1 -a "$INTELKVMMOD" -ge 1 ] ; then
-            echo "KVM: enabled (intel)"
-        elif [ "$AMDCPUFLAGS" -ge 1 -a "$AMDKVMMOD" -ge 1 ]
-        then
-            echo "KVM: enabled (amd)"
+        if [[ "$OSTYPE" == "linux"* ]] ; then
+            # TODO: QEMU: Checking if device /dev/kvm exists : PASS
+            # TODO: QEMU: Checking if device /dev/kvm is accessible : PASS
+            INTELCPUFLAGS=$(grep -c "vmx" /proc/cpuinfo)
+            AMDCPUFLAGS=$(grep -c "svm" /proc/cpuinfo)
+            INTELKVMMOD=$(lsmod | grep -c "kvm_intel")
+            AMDKVMMOD=$(lsmod | grep -c "kvm_amd")
+            if [ "$INTELCPUFLAGS" -ge 1 -a "$INTELKVMMOD" -ge 1 ] ; then
+                echo "Accelerator: KVM enabled (intel)"
+            elif [ "$AMDCPUFLAGS" -ge 1 -a "$AMDKVMMOD" -ge 1 ]
+            then
+                echo "Accelerator: KVM enabled (amd)"
+            else
+                echo "ERROR: Accelerator not available for QEMU!"
+                exit
+            fi
+        elif [[ "$OSTYPE" == "darwin"* ]] ; then
+            # TODO: what to check?
+            echo "Accelerator: HVF enabled (maybe?)"
         else
-            echo "ERROR: KVM not available for QEMU!" # TODO also check module permissions!
-            exit
+            echo "Accelerator: not yet supported :-("
         fi
     else
-        echo "KVM: disabled (not recommanded)"
+        echo "ERROR: Accelerator not available for QEMU!"
     fi
     
     # using virt-manager
@@ -311,7 +326,15 @@ CHECKRC() {
         which virsh &> /dev/null
         [ $? -ne 0 ] && echo "ERROR: virsh not found, but required for -m option!" && exit
     fi
-    
+
+    # check remote-viewer for VNC or SPICE display mode
+    if [ $REMOTEVIEWER -eq 1 ] ; then
+        if ! [ -x  "$(type -P remote-viewer)" ] ; then
+            echo "ERROR: remote-viewer not found (only useful for VNC or SPICE display)!"
+            exit
+        fi
+    fi
+
     # check libguestfs-tools for -C option
     # if [ $COPYIN -eq 1 ] ; then
     #     which virt-copy-in &> /dev/null
@@ -607,8 +630,9 @@ HOST() {
     # basic options
     CMD="$QEMU -name $HOSTNAME -rtc base=localtime"
     
-    # kvm option (by default)
-    if [ "$NOKVM" -eq 0 ] ; then CMD="$CMD -enable-kvm" ; fi
+    # accelerator option (by default)
+    # if [ $ACCEL -eq 1 ] ; then CMD="$CMD -enable-kvm" ; fi
+    if [ $ACCEL -eq 1 ] ; then CMD="$CMD -M accel=kvm:hax:hvf -cpu host" ; fi
     
     # specific QEMU options
     CMD="$CMD $HOSTOPT"
@@ -683,35 +707,44 @@ HOST() {
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}"
-        # elif [ "$QEMUDISPLAY" = "socket" ] ; then # unix socket mode
-        #     # bug: with this option, any ctrl-c (SIGINT) in VM will kill all qemu session!
-        #     # solution: use socat in raw mode with escape option!
-        #     CMD="$CMD -monitor unix:$SESSIONDIR/$HOSTNAME.monitor,server,nowait"
-        #     # redirect both qemu monitor & console in two Unix sockets, that can be connected with socat
-        #     # $ socat stdin,raw,echo=0 unix-connect:session/<hostname>.sock
-        #     CMD="$CMD -serial unix:$SESSIONDIR/$HOSTNAME.sock,server" # wait client connection, else use "nowait" option
-        #     # CMD="$CMD -nographic"
-        #     CMD="$CMD -display none"
-        #     echo "[$HOSTNAME] $CMD"
-        #     bash -c "${CMD[@]}" &
-        elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
+    # screen
+    elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
         CMD="$CMD -nographic"
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         screen -S "qemunet:$HOSTNAME" -d -m bash -c "${CMD[@]}" # detached
-        # tmux
-        elif [ "$QEMUDISPLAY" = "tmux" ] ; then
+    # tmux
+    elif [ "$QEMUDISPLAY" = "tmux" ] ; then
         CMD="$CMD -nographic"
         echo "[$HOSTNAME] $CMD"
         TMUXID="qemunet"
         tmux new-window -t $TMUXID -n $HOSTNAME bash -c "${CMD[@]}" # detached
-        # xterm
-        elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then
+    # xterm
+    elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then
         CMD="$CMD -nographic"
         XCMD=$(TERMCMD $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
         $XCMD "${CMD[@]}" &
-    else # standard / graphic mode
+    # vnc
+    elif [ "$QEMUDISPLAY" = "vnc" ] ; then
+        VNCPORT=5900            # default port for VNC
+        ((VNCPORT+=HOSTNUM))
+        CMD="$CMD -vnc :$HOSTNUM -usb -device usb-tablet"
+        echo "[$HOSTNAME] $CMD"
+        bash -c "${CMD[@]}" &
+        [ $REMOTEVIEWER -eq 1 ] && remote-viewer vnc://localhost:$VNCPORT &
+    # spice
+    elif [ "$QEMUDISPLAY" = "spice" ] ; then
+        SPICEPORT=5900
+        ((SPICEPORT+=HOSTNUM))
+        CMD="$CMD -vga qxl -spice port=$SPICEPORT,addr=127.0.0.1,disable-ticketing"
+        SPICEOPT="-device virtio-serial -chardev spicevmc,id=vdagent,name=vdagent -device virtserialport,chardev=vdagent,name=com.redhat.spice.0"
+        CMD="$CMD $SPICEOPT"
+        echo "[$HOSTNAME] $CMD"
+        bash -c "${CMD[@]}" &
+        [ $REMOTEVIEWER -eq 1 ] && remote-viewer spice://localhost:$SPICEPORT &
+    # standard / graphic mode
+    else
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
     fi
@@ -725,7 +758,8 @@ HOST() {
     # echo "[$HOSTNAME] pid $PID"
     # next
     # HOSTPIDS="$HOSTPIDS $PID"
-    HOSTNUM=$(expr $HOSTNUM + 1)
+    # HOSTNUM=$(expr $HOSTNUM + 1)
+    ((HOSTNUM++))
 }
 
 ### SWITCH TRUNKING ###
@@ -786,7 +820,8 @@ WAIT() {
     #     kill -CONT $$
     #     # echo "not yet stopped!"
     #     fi 
-    sleep infinity
+
+    while true; do sleep 1000; done
 }
 
 ### EXIT ###

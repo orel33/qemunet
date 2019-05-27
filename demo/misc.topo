@@ -1,0 +1,14 @@
+### TEST MISC
+
+SWITCH s1
+SWITCH s2
+HOST debian10x debianx s1
+HOST debian10 gw s1 s2 
+HOST kali kali s2
+
+
+
+
+
+
+

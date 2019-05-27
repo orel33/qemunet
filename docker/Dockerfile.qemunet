@@ -3,8 +3,8 @@ MAINTAINER Aurelien Esnard <aurelien.esnard@u-bordeaux.fr>
 WORKDIR /home/docker
 ARG DEBIAN_FRONTEND=noninteractive
 
-# qemunet2
-RUN mkdir images && cd images && wget -q "http://aurelien.esnard.emi.u-bordeaux.fr/qemunet2/debian10.tgz" && tar xvzf debian10.tgz && rm debian10.tgz
-RUN git clone https://github.com/orel33/qemunet.git -b qemunet2
+# qemunet
+RUN mkdir images && cd images && wget -q "http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/debian10.tgz" && tar xvzf debian10.tgz && rm debian10.tgz
+RUN git clone https://github.com/orel33/qemunet.git
 RUN pwd
 RUN cd qemunet/images && ln -s /home/docker/images/debian10.img && ln -s /home/docker/images/debian10.initrd && ln -s /home/docker/images/debian10.vmlinuz
