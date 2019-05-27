@@ -1,6 +1,15 @@
 # Virtual Network with QemuNet
 
-*QemuNet is a light shell script based on QEMU and VDE to enable easy virtual networking.*
+*QemuNet is a light shell script based on QEMU Virtual Machine (VM) and VDE Virtual Switch to enable easy Virtual Networking.*
+
+```text
+   ____                       _   _      _   
+  / __ \                     | \ | |    | |  
+ | |  | | ___ _ __ ___  _   _|  \| | ___| |_ 
+ | |  | |/ _ \ '_ ` _ \| | | | . ` |/ _ \ __|
+ | |__| |  __/ | | | | | |_| | |\  |  __/ |_ 
+  \___\_\\___|_| |_| |_|\__,_|_| \_|\___|\__|
+```
 
 ## QemuNet
 
@@ -173,33 +182,45 @@ QemuNet is based on a single bash script *qemunet.sh*. Here are detailed availab
 
 ```text
 Start/restore a session:
-  qemunet.sh -t topology [-a images.tgz] [...]
+  qemunet.sh -t topology [-a extra.tgz] [...]
   qemunet.sh -s session.tgz [...]
   qemunet.sh -S session/directory [...]
 Options:
     -t <topology>: network topology file
-    -s <session.tgz>: session archive
-    -S <session directory>: session directory
+    -s <session.tgz>: load session from an archive
+    -S <session directory>: load session from a directory
     -h: print this help message
 Advanced Options:
-    -a <images.tgz>: load a qcow2 image archive for all VMs
+    -a <extra.tgz>: decompress an extra archive in session directory
     -c <config>: load system config file (default is qemunet.cfg)
     -x: launch VM in xterm terminal (only for linux system running on ttyS0)
     -d <display>: launch VM with special display mode: 
-       * graphic: standard qemu dislay mode (default mode)
-       * xterm: qemu serial/text mode running within xterm (same as -x option)
-       * rxvt: same as xterm mode, but rxvt command instead
-       * tmux: qemu serial/text mode running within a tmux session
-       * socket: redirect qemu console & monitor display to Unix socket
-    -y: launch VDE switch management console in terminal
-    -i: enable Slirp interface for Internet access (ping not allowed)
-    -m: mount shared directory in /mnt/host (default for linux system)
-    -q: ignore and remove qcow2 images for the running session
-    -M: disable mount
+       * graphic: standard QEMU display mode (default mode)
+       * xterm: QEMU serial/text mode running within xterm (same as -x option)
+       * rxvt: same as xterm mode, but using rxvt instead
+       * gnome: same as xterm mode, but using gnome-terminal instead
+       * xfce4: same as xterm mode, but using xfce4-terminal instead
+       * tmux: QEMU serial/text mode running within a tmux session (experimental)
+       * screen: QEMU serial/text mode running within a screen session (experimental)
+       * vnc: use QEMU VNC display (experimental)
+       * spice: use QEMU SPICE display (experimental)
+       * none: no graphic (experimental)
+More Advanced Options:
+    -l <sysname>: launch a VM in standalone mode to test it...
+    -L <sysname>: launch a VM in standalone mode using raw disk image (warning: image will be modified)
+    -D <sysname>: download system image from URL provided in config file
+    -b: run qemunet as a background command
+    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)
+    -M: disable mount directory
+    -f: mount extra disk <session directory>/<hostname>.disk (default)
+    -F: disable mount disk
+    -k: enable an accelerator: kvm, hvf (default)
+    -K: disable accelerator (not recommanded, too slow)
     -v: enable VLAN support
-    -k: enable KVM full virtualization support (default)
-    -K: disable KVM full virtualization support (not recommanded)
-    -l <sysname>: launch a VM in standalone mode to update its raw disk image
+    -V: start remote viewer(s) for VNC or SPICE display mode
+    -y: launch VDE switch management console in terminal
+    -i: enable QEMU Slirp interface for Internet access (ping not allowed)
+    -z <args>: append linux kernel arguments (linux only)
 ```
 
 ### Configuration of QemuNet
