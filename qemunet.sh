@@ -113,13 +113,14 @@ USAGE() {
     echo "    -c <config>: load system config file (default is qemunet.cfg)"
     echo "    -x: launch VM in xterm terminal (only for linux system running on ttyS0)"
     echo "    -d <display>: launch VM with special display mode: "
-    echo "       * graphic: standard qemu display mode (default mode)"
-    echo "       * xterm: qemu serial/text mode running within xterm (same as -x option)"
+    echo "       * graphic: standard QEMU display mode (default mode)"
+    echo "       * xterm: QEMU serial/text mode running within xterm (same as -x option)"
     echo "       * rxvt: same as xterm mode, but using rxvt instead"
     echo "       * gnome: same as xterm mode, but using gnome-terminal instead"
     echo "       * xfce4: same as xterm mode, but using xfce4-terminal instead"
-    echo "       * tmux: qemu serial/text mode running within a tmux session (experimental)"
-    echo "       * screen: qemu serial/text mode running within a screen session (experimental)"
+    echo "       * tmux: QEMU serial/text mode running within a tmux session (experimental)"
+    echo "       * screen: QEMU serial/text mode running within a screen session (experimental)"
+    echo "       * vnc: QEMU VNC display (experimental)"
     echo "       * none: no graphic (experimental)"
     echo "More Advanced Options:"
     echo "    -l <sysname>: launch a VM in standalone mode to update its raw disk image"
@@ -132,7 +133,7 @@ USAGE() {
     echo "    -K: disable accelerator (not recommanded, too slow)"
     echo "    -v: enable VLAN support"
     echo "    -y: launch VDE switch management console in terminal"
-    echo "    -i: enable qemu Slirp interface for Internet access (ping not allowed)"
+    echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
     exit
 }
@@ -703,24 +704,31 @@ HOST() {
         #     CMD="$CMD -display none"
         #     echo "[$HOSTNAME] $CMD"
         #     bash -c "${CMD[@]}" &
-        elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
+    # screen
+    elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
         CMD="$CMD -nographic"
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         screen -S "qemunet:$HOSTNAME" -d -m bash -c "${CMD[@]}" # detached
-        # tmux
-        elif [ "$QEMUDISPLAY" = "tmux" ] ; then
+    # tmux
+    elif [ "$QEMUDISPLAY" = "tmux" ] ; then
         CMD="$CMD -nographic"
         echo "[$HOSTNAME] $CMD"
         TMUXID="qemunet"
         tmux new-window -t $TMUXID -n $HOSTNAME bash -c "${CMD[@]}" # detached
-        # xterm
-        elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then
+    # xterm
+    elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then
         CMD="$CMD -nographic"
         XCMD=$(TERMCMD $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
         $XCMD "${CMD[@]}" &
-    else # standard / graphic mode
+    # vnc
+    elif [ "$QEMUDISPLAY" = "vnc" ] ; then
+        CMD="$CMD -vnc :$HOSTNUM"
+        echo "[$HOSTNAME] $CMD"
+        bash -c "${CMD[@]}" &
+    # standard / graphic mode
+    else
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
     fi
@@ -734,7 +742,8 @@ HOST() {
     # echo "[$HOSTNAME] pid $PID"
     # next
     # HOSTPIDS="$HOSTPIDS $PID"
-    HOSTNUM=$(expr $HOSTNUM + 1)
+    # HOSTNUM=$(expr $HOSTNUM + 1)
+    ((HOSTNUM++))
 }
 
 ### SWITCH TRUNKING ###
