@@ -97,7 +97,7 @@ First, you need to prepare a virtual topology file, as for example [demo/lan.top
 ```bash
 # SWICTH switchname
 SWITCH s1
-# HOST sysname hostname switchname0 switchname1 ...
+# HOST sysname[/displaymode] hostname switchname0 switchname1 ...
 HOST debian host1 s1
 HOST debian host2 s1
 HOST debian host3 s1
@@ -290,7 +290,7 @@ The "-v" option is required to enable VLAN support in QemuNet. The "-y" option s
 * To get the QEMU [Monitor](https://en.wikibooks.org/wiki/QEMU/Monitor) console in serial mode, type *Ctrl+A C*.... Then type *help* to get the command list (system_reset, system_powerdown, ...).
 * In case of hard failure with a VM (killed, halted, ...), you can restart it using the script named *hostname.sh* in the session directory!
 
-## QemuNetWeb 
+## QemuNet Web
 
 I am currently working on a web extension of QemuNet based on:
 
@@ -302,6 +302,6 @@ The idea is to give my students an easy solution to use Virtual Network @ Home a
 
 Follow branch qemunetweb on github.
 
-### Contact me
+### Contact Me
 
 <mailto:aurelien.esnard@u-bordeaux.fr>
