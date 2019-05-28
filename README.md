@@ -78,15 +78,12 @@ By default, the *images* directory is empty. The default system images (describe
 
 ### Test
 
-Now, you can launch the following tests, that are  based on a *Linux TinyCore* system or a *Linux Debian* system. 
+You can easily test a system already available in QemuNet (check *qemunet.cfg*), as follow:
 
 ```bash
-./qemunet.sh -t demo/tinycore.topo
-./qemunet.sh -t demo/single.topo
+./qemunet.sh -l tinycore -i   # Linux TinyCore
+./qemunet.sh -l debian -i     # Linux Debian
 ```
-
-At this point, if you get some errors, go to the *Configuration" section.
-
 
 ### Let's start with a basic LAN
 
@@ -109,14 +106,14 @@ Here is an example of the *QemuNet* configuration file *qemunet.cfg*. It require
 ```bash
 IMGDIR="/absolute/path/to/raw/system/images"
 SYS[debian]="linux"
-QEMUOPT[debian]="-localtime -m 512"
+QEMUOPT[debian]="-m 512"
 FS[debian]="$IMGDIR/debian/debian.img"
 KERNEL[debian]="$IMGDIR/debian/debian.vmlinuz"
 INITRD[debian]="$IMGDIR/debian/debian.initrd"
 URL[debian]="http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/debian.tgz"
 ```
 
-Following, you can launch your Virtual Network (VN). All the current session files are provided in the *session* directory, that is linked to a unique directory in /tmp. 
+Following, you can launch your Virtual Network (VN). All the current session files are provided in the *session* directory, that is linked to a unique directory in /tmp.
 
 ```bash
 ./qemunet.sh -t images/debian/lan.topo
@@ -154,10 +151,10 @@ In addition, we use a startup script to load a user-defined script "/mnt/host/st
 Other samples are available in the [demo](https://github.com/orel33/qemunet/tree/master/demo) subdirectory, as for instance:
 
 * [demo/single.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/single.topo) : a basic single "debian" VM (no network)
-* [demo/lan.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/lan.topo) : a LAN of 4 "debian" VMs interconnected by a switch 
+* [demo/lan.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/lan.topo) : a LAN of 4 "debian" VMs interconnected by a switch
 * [demo/chain.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/chain.topo) : a chain of 5 "debian" VMs interconnected by 4 switches
 * [demo/gw.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/gw.topo) : an example of LAN with a gateway connected to an external LAN
-* [demo/dmz.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/dmz.topo) : a more complex topology with two internal LANs (including a DMZ) 
+* [demo/dmz.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/dmz.topo) : a more complex topology with two internal LANs (including a DMZ)
 * [demo/vlan.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/vlan.topo) : a basic LAN divided in two VLANs
 * [demo/trunk.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/trunk.topo) : two VLANs with trunking
 
@@ -166,7 +163,7 @@ Other samples are available in the [demo](https://github.com/orel33/qemunet/tree
 For instance, if you want to install new packages in the "debian" image, you can do it easily like this:
 
 ```bash
-./qemunet.sh -l debian # -l option implies -i
+./qemunet.sh -L debian -i
 ```
 
 Then, in the VM, start network and install whatever you want:
