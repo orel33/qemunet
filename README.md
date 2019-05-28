@@ -25,9 +25,11 @@ Be patient, the system image required for this demo will be downloaded. Then, yo
 
 <center><img src="snap-qemunet-lan.png" width="80%" align="middle"></center>
 
-Mixing different systems and display modes are also possible. The following example shows three VMs connected as follows ```debian10x/spice <--> debian10/xterm <--> win10/spice``` ([demo/misc.topo](https://github.com/orel33/qemunet/blob/master/demo/lan.topo)) :
+Mixing different systems and display modes are also possible. The following example shows three VMs connected as follows ```debian10x/spice <--> debian10/xterm <--> win10/spice``` ([demo/misc.topo](https://github.com/orel33/qemunet/blob/master/demo/misc.topo)) :
 
 <center><img src="snap-qemunet-misc.png" width="80%" align="middle"></center>
+
+(*) For obvious reasons, win10 system image is not provided in QemuNet.
 
 ### Requirements
 
