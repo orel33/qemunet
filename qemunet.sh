@@ -649,7 +649,7 @@ HOST() {
     
     # accelerator option (by default)
     # if [ $ACCEL -eq 1 ] ; then CMD="$CMD -enable-kvm" ; fi
-    if [ $ACCEL -eq 1 ] ; then CMD="$CMD -M accel=kvm:hax:hvf -cpu host" ; fi
+    if [ $ACCEL -eq 1 ] ; then CMD="$CMD -M accel=kvm:hvf:hax -cpu host" ; fi
     
     # specific QEMU options
     CMD="$CMD $HOSTOPT"
@@ -749,17 +749,20 @@ HOST() {
         CMD="$CMD -vnc :$HOSTNUM -usb -device usb-tablet"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
-        [ $REMOTEVIEWER -eq 1 ] && remote-viewer vnc://localhost:$VNCPORT &
+        RVCMD="remote-viewer vnc://localhost:$VNCPORT"
+        [ $REMOTEVIEWER -eq 1 ] && echo "[$HOSTNAME] $RVCMD" && $RVCMD &
     # spice
     elif [ "$QEMUDISPLAY" = "spice" ] ; then
         SPICEPORT=5900
         ((SPICEPORT+=HOSTNUM))
         CMD="$CMD -vga qxl -spice port=$SPICEPORT,addr=127.0.0.1,disable-ticketing"
+        # SPICEOPT are useful for copy & paste based on vdagent installed in guest...
         SPICEOPT="-device virtio-serial -chardev spicevmc,id=vdagent,name=vdagent -device virtserialport,chardev=vdagent,name=com.redhat.spice.0"
         CMD="$CMD $SPICEOPT"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
-        [ $REMOTEVIEWER -eq 1 ] && remote-viewer spice://localhost:$SPICEPORT &
+        RVCMD="remote-viewer spice://localhost:$SPICEPORT"
+        [ $REMOTEVIEWER -eq 1 ] && echo "[$HOSTNAME] $RVCMD" && $RVCMD &
     # standard / graphic mode
     else
         echo "[$HOSTNAME] $CMD"
