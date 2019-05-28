@@ -1,12 +1,12 @@
 ### LAN
 
-#                                    
-#                               opeth grave 
-#                                 \   / 
+#
+#                               opeth grave
+#                                 \   /
 #                                  [s1]
 #                                 /    \
 #                                syl immortal
-# 
+#
 
 SWITCH s1
 HOST debian  immortal s1

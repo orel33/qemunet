@@ -15,16 +15,19 @@
 
 ### Quick Start
 
-Install QemuNet and launch a simple LAN topology:
+Install QemuNet and launch a simple LAN topology ([demo/lan.topo](https://github.com/orel33/qemunet/blob/master/demo/lan.topo))...
 
 ```bash
-$ ./qemunet.sh -x -t demo/lan.topo
+$ ./qemunet.sh -d xterm -t demo/lan.topo
 ```
 
-Then, you will get 4 root consoles on Linux/Debian virtual hosts (in text mode):
+Be patient, the system image required for this demo will be downloaded. Then, you will get 4 root consoles on Linux/Debian virtual hosts. The linux kernel booting in text/serial mode and Qemunet is using "xterm" display mode:
 
-<center><img src="snap-qemunet.png" width="90%" align="middle"></center>
+<center><img src="snap-qemunet-lan.png" width="80%" align="middle"></center>
 
+Mixing different systems and display modes are also possible. The following example shows three VMs connected as follows ```debian10x/spice <--> debian10/xterm <--> win10/spice``` ([demo/misc.topo](https://github.com/orel33/qemunet/blob/master/demo/lan.topo)) :
+
+<center><img src="snap-qemunet-misc.png" width="80%" align="middle"></center>
 
 ### Requirements
 
@@ -77,7 +80,7 @@ Now, you can launch the following tests, that are  based on a *Linux TinyCore* s
 
 ```bash
 ./qemunet.sh -t demo/tinycore.topo
-./qemunet.sh -t demo/single.topo  
+./qemunet.sh -t demo/single.topo
 ```
 
 At this point, if you get some errors, go to the *Configuration" section.
@@ -194,7 +197,7 @@ Advanced Options:
     -a <extra.tgz>: decompress an extra archive in session directory
     -c <config>: load system config file (default is qemunet.cfg)
     -x: launch VM in xterm terminal (only for linux system running on ttyS0)
-    -d <display>: launch VM with special display mode: 
+    -d <display mode>: launch VM with special display mode: 
        * graphic: standard QEMU display mode (default mode)
        * xterm: QEMU serial/text mode running within xterm (same as -x option)
        * rxvt: same as xterm mode, but using rxvt instead
