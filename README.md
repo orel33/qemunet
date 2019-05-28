@@ -1,21 +1,35 @@
 # Virtual Network with QemuNet
 
-*QemuNet is a light shell script based on QEMU and VDE to enable easy virtual networking.*
+*QemuNet is a light shell script based on QEMU Virtual Machine (VM) and VDE Virtual Switch to enable easy Virtual Networking.*
+
+```text
+   ____                       _   _      _   
+  / __ \                     | \ | |    | |  
+ | |  | | ___ _ __ ___  _   _|  \| | ___| |_ 
+ | |  | |/ _ \ '_ ` _ \| | | | . ` |/ _ \ __|
+ | |__| |  __/ | | | | | |_| | |\  |  __/ |_ 
+  \___\_\\___|_| |_| |_|\__,_|_| \_|\___|\__|
+```
 
 ## QemuNet
 
 ### Quick Start
 
-Install QemuNet and launch a simple LAN topology:
+Install QemuNet and launch a simple LAN topology ([demo/lan.topo](https://github.com/orel33/qemunet/blob/master/demo/lan.topo))...
 
 ```bash
-$ ./qemunet.sh -x -t demo/lan.topo
+$ ./qemunet.sh -d xterm -t demo/lan.topo
 ```
 
-Then, you will get 4 root consoles on Linux/Debian virtual hosts (in text mode):
+Be patient, the system image required for this demo will be downloaded. Then, you will get 4 root consoles on Linux/Debian virtual hosts. The linux kernel booting in text/serial mode and Qemunet is using "xterm" display mode:
 
-<center><img src="snap-qemunet.png" width="90%" align="middle"></center>
+<center><img src="snap-qemunet-lan.png" width="80%" align="middle"></center>
 
+Mixing different systems and display modes are also possible. The following example shows three VMs connected as follows ```debian10x/spice <--> debian10/xterm <--> win10/spice``` ([demo/misc.topo](https://github.com/orel33/qemunet/blob/master/demo/misc.topo)) :
+
+<center><img src="snap-qemunet-misc.png" width="80%" align="middle"></center>
+
+(*) For obvious reasons, win10 system image is not provided in QemuNet.
 
 ### Requirements
 
@@ -64,16 +78,13 @@ By default, the *images* directory is empty. The default system images (describe
 
 ### Test
 
-Now, you can launch the following tests, that are  based on a *Linux TinyCore* system or a *Linux Debian* system. 
+You can easily test a system already available in QemuNet (check *qemunet.cfg*), as follow:
 
 ```bash
-./qemunet.sh -t demo/tinycore.topo
-./qemunet.sh -t demo/single.topo  
+./qemunet.sh -l tinycore -i   # Linux TinyCore
+./qemunet.sh -l debian -i     # Linux Debian
 ```
-
-At this point, if you get some errors, go to the *Configuration" section.
-
-
+  
 ### Let's start with a basic LAN
 
 You will find several examples in the *demo* subdirectory. But, let's start with a basic LAN topology.
@@ -83,7 +94,7 @@ First, you need to prepare a virtual topology file, as for example [demo/lan.top
 ```bash
 # SWICTH switchname
 SWITCH s1
-# HOST sysname hostname switchname0 switchname1 ...
+# HOST sysname[/displaymode] hostname switchname0 switchname1 ...
 HOST debian host1 s1
 HOST debian host2 s1
 HOST debian host3 s1
@@ -95,14 +106,14 @@ Here is an example of the *QemuNet* configuration file *qemunet.cfg*. It require
 ```bash
 IMGDIR="/absolute/path/to/raw/system/images"
 SYS[debian]="linux"
-QEMUOPT[debian]="-localtime -m 512"
+QEMUOPT[debian]="-m 512"
 FS[debian]="$IMGDIR/debian/debian.img"
 KERNEL[debian]="$IMGDIR/debian/debian.vmlinuz"
 INITRD[debian]="$IMGDIR/debian/debian.initrd"
 URL[debian]="http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/debian.tgz"
 ```
 
-Following, you can launch your Virtual Network (VN). All the current session files are provided in the *session* directory, that is linked to a unique directory in /tmp. 
+Following, you can launch your Virtual Network (VN). All the current session files are provided in the *session* directory, that is linked to a unique directory in /tmp.
 
 ```bash
 ./qemunet.sh -t images/debian/lan.topo
@@ -140,10 +151,10 @@ In addition, we use a startup script to load a user-defined script "/mnt/host/st
 Other samples are available in the [demo](https://github.com/orel33/qemunet/tree/master/demo) subdirectory, as for instance:
 
 * [demo/single.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/single.topo) : a basic single "debian" VM (no network)
-* [demo/lan.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/lan.topo) : a LAN of 4 "debian" VMs interconnected by a switch 
+* [demo/lan.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/lan.topo) : a LAN of 4 "debian" VMs interconnected by a switch
 * [demo/chain.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/chain.topo) : a chain of 5 "debian" VMs interconnected by 4 switches
 * [demo/gw.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/gw.topo) : an example of LAN with a gateway connected to an external LAN
-* [demo/dmz.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/dmz.topo) : a more complex topology with two internal LANs (including a DMZ) 
+* [demo/dmz.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/dmz.topo) : a more complex topology with two internal LANs (including a DMZ)
 * [demo/vlan.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/vlan.topo) : a basic LAN divided in two VLANs
 * [demo/trunk.topo](https://raw.githubusercontent.com/orel33/qemunet/master/demo/trunk.topo) : two VLANs with trunking
 
@@ -152,7 +163,7 @@ Other samples are available in the [demo](https://github.com/orel33/qemunet/tree
 For instance, if you want to install new packages in the "debian" image, you can do it easily like this:
 
 ```bash
-./qemunet.sh -l debian # -l option implies -i
+./qemunet.sh -L debian -i
 ```
 
 Then, in the VM, start network and install whatever you want:
@@ -173,33 +184,45 @@ QemuNet is based on a single bash script *qemunet.sh*. Here are detailed availab
 
 ```text
 Start/restore a session:
-  qemunet.sh -t topology [-a images.tgz] [...]
+  qemunet.sh -t topology [-a extra.tgz] [...]
   qemunet.sh -s session.tgz [...]
   qemunet.sh -S session/directory [...]
 Options:
     -t <topology>: network topology file
-    -s <session.tgz>: session archive
-    -S <session directory>: session directory
+    -s <session.tgz>: load session from an archive
+    -S <session directory>: load session from a directory
     -h: print this help message
 Advanced Options:
-    -a <images.tgz>: load a qcow2 image archive for all VMs
+    -a <extra.tgz>: decompress an extra archive in session directory
     -c <config>: load system config file (default is qemunet.cfg)
     -x: launch VM in xterm terminal (only for linux system running on ttyS0)
-    -d <display>: launch VM with special display mode: 
-       * graphic: standard qemu dislay mode (default mode)
-       * xterm: qemu serial/text mode running within xterm (same as -x option)
-       * rxvt: same as xterm mode, but rxvt command instead
-       * tmux: qemu serial/text mode running within a tmux session
-       * socket: redirect qemu console & monitor display to Unix socket
-    -y: launch VDE switch management console in terminal
-    -i: enable Slirp interface for Internet access (ping not allowed)
-    -m: mount shared directory in /mnt/host (default for linux system)
-    -q: ignore and remove qcow2 images for the running session
-    -M: disable mount
+    -d <display mode>: launch VM with special display mode: 
+       * graphic: standard QEMU display mode (default mode)
+       * xterm: QEMU serial/text mode running within xterm (same as -x option)
+       * rxvt: same as xterm mode, but using rxvt instead
+       * gnome: same as xterm mode, but using gnome-terminal instead
+       * xfce4: same as xterm mode, but using xfce4-terminal instead
+       * tmux: QEMU serial/text mode running within a tmux session (experimental)
+       * screen: QEMU serial/text mode running within a screen session (experimental)
+       * vnc: use QEMU VNC display (experimental)
+       * spice: use QEMU SPICE display (experimental)
+       * none: no graphic (experimental)
+More Advanced Options:
+    -l <sysname>: launch a VM in standalone mode to test it...
+    -L <sysname>: launch a VM in standalone mode using raw disk image (warning: image will be modified)
+    -D <sysname>: download system image from URL provided in config file
+    -b: run qemunet as a background command
+    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)
+    -M: disable mount directory
+    -f: mount extra disk <session directory>/<hostname>.disk (default)
+    -F: disable mount disk
+    -k: enable an accelerator: kvm, hvf (default)
+    -K: disable accelerator (not recommanded, too slow)
     -v: enable VLAN support
-    -k: enable KVM full virtualization support (default)
-    -K: disable KVM full virtualization support (not recommanded)
-    -l <sysname>: launch a VM in standalone mode to update its raw disk image
+    -V: start remote viewer(s) for VNC or SPICE display mode
+    -y: launch VDE switch management console in terminal
+    -i: enable QEMU Slirp interface for Internet access (ping not allowed)
+    -z <args>: append linux kernel arguments (linux only)
 ```
 
 ### Configuration of QemuNet
@@ -264,7 +287,7 @@ The "-v" option is required to enable VLAN support in QemuNet. The "-y" option s
 * To get the QEMU [Monitor](https://en.wikibooks.org/wiki/QEMU/Monitor) console in serial mode, type *Ctrl+A C*.... Then type *help* to get the command list (system_reset, system_powerdown, ...).
 * In case of hard failure with a VM (killed, halted, ...), you can restart it using the script named *hostname.sh* in the session directory!
 
-## QemuNetWeb 
+## QemuNet Web
 
 I am currently working on a web extension of QemuNet based on:
 
@@ -276,6 +299,6 @@ The idea is to give my students an easy solution to use Virtual Network @ Home a
 
 Follow branch qemunetweb on github.
 
-### Contact me
+### Contact Me
 
 <mailto:aurelien.esnard@u-bordeaux.fr>

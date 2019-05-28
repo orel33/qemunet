@@ -59,7 +59,7 @@ XTERM=0
 USEVLAN=0
 # RMQCOW2=0
 SWITCHTERM=0
-QEMUDISPLAY="graphic"   # xterm or rxvt or tmux or graphic or ...
+DISPLAYMODE="graphic"   # xterm or rxvt or tmux or graphic or ...
 BACKGROUND=0
 REMOTEVIEWER=0          # remote viewer for VNC or SPICE server/display
 
@@ -75,16 +75,18 @@ SOCAT="socat"
 WGET="wget"
 
 TERMCMD () {
-    if [ "$QEMUDISPLAY" = "xterm" ] ; then
-        echo "xterm -fg white -bg black -T $1 -e" ;
-        elif [ "$QEMUDISPLAY" = "rxvt" ] ; then
-        echo "rxvt -bg Black -fg White -title $1 -e bash -c" ;
-        elif [ "$QEMUDISPLAY" = "gnome" ] ; then
+    local THISTERM="$1"
+    local THISNAME="$2"
+    if [ "$THISTERM" = "xterm" ] ; then
+        echo "xterm -fg white -bg black -T $THISNAME -e" ;
+    elif [ "$THISTERM" = "rxvt" ] ; then
+        echo "rxvt -bg Black -fg White -title $THISNAME -e bash -c" ;
+    elif [ "$THISTERM" = "gnome" ] ; then
         echo "gnome-terminal -- bash -c" ;
-        elif [ "$QEMUDISPLAY" = "xfce4" ] ; then
-        echo "xfce4-terminal -T $1 -x bash -c" ;
+    elif [ "$THISTERM" = "xfce4" ] ; then
+        echo "xfce4-terminal -T $THESYSNAME -x bash -c" ;
     else
-        echo "ERROR:Invalid display mode!"
+        echo "ERROR: Invalid terminal display mode \"$THISTERM\"!"
     fi
 }
 
@@ -112,7 +114,7 @@ USAGE() {
     echo "    -a <extra.tgz>: decompress an extra archive in session directory"
     echo "    -c <config>: load system config file (default is qemunet.cfg)"
     echo "    -x: launch VM in xterm terminal (only for linux system running on ttyS0)"
-    echo "    -d <display>: launch VM with special display mode: "
+    echo "    -d <display mode>: launch VM with special display mode: "
     echo "       * graphic: standard QEMU display mode (default mode)"
     echo "       * xterm: QEMU serial/text mode running within xterm (same as -x option)"
     echo "       * rxvt: same as xterm mode, but using rxvt instead"
@@ -207,10 +209,10 @@ GETARGS() {
                 OPTKERNELARGS="$OPTARG"
             ;;
             d)
-                QEMUDISPLAY="$OPTARG" # check $DISPLAY MODE
+                DISPLAYMODE="$OPTARG" # check $DISPLAY MODE
             ;;
             x)
-                QEMUDISPLAY="xterm"
+                DISPLAYMODE="xterm"
             ;;
             y)
                 SWITCHTERM=1
@@ -362,7 +364,7 @@ INITSESSION() {
     echo "********** Starting QemuNet Session **********"
 
     ### special tmux init
-    if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
+    if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
 
     ### init session directory
     if [ -z "$SESSIONDIR" ] ; then SESSIONDIR="/tmp/$SESSIONID" ; mkdir -p $SESSIONDIR ; fi
@@ -408,7 +410,7 @@ INITSESSION() {
     
     ### PRINT SESSION
     echo "MODE: $MODE"
-    echo "DISPLAY: $QEMUDISPLAY"
+    echo "DISPLAY MODE: $DISPLAYMODE"
     echo "SESSION ID: $SESSIONID"
     echo "SESSION DIRECTORY: $SESSIONDIR"
     echo "SESSION LINK: $SESSIONLINK"
@@ -443,7 +445,7 @@ LOADCONF() {
     for SYSNAME in "${!FS[@]}"; do
         echo "[$SYSNAME]"
         echo "* SYS = ${SYS[$SYSNAME]}"
-        echo "* QEMU OPT = ${QEMUOPT[$SYSNAME]}"
+        [ -n "${QEMUOPT[$SYSNAME]}" ] && echo "* QEMU OPT = ${QEMUOPT[$SYSNAME]}"
         
         HOSTFS="${FS[$SYSNAME]}"
         HOSTKERNEL="${KERNEL[$SYSNAME]}"
@@ -551,7 +553,7 @@ SWITCH() {
     fi
     # launch VDE switch management console in xterm terminal
     if [ "$SWITCHTERM" -eq 1 ] ; then
-        CMD=$(TERMCMD $SWITCHNAME)
+        CMD=$(TERMCMD xterm $SWITCHNAME)
         CMD="${CMD} vdeterm $SWITCHMGMT"
         echo "[$SWITCHNAME] $CMD"
         $CMD &
@@ -626,21 +628,25 @@ NETWORK() {
 
 ### VIRTUAL HOST ###
 
-# HOST sysname hostname switch0[:vlan0] switch1[:vlan1] ...
+# HOST sysname hostname[/displaymode] switch0[:vlan0] switch1[:vlan1] ...
 HOST() {
-    SYSNAME=$1
-    HOSTNAME=$2
+    
+    # SYSNAME=$1
+    local SYSNAME=$(echo "$1" | cut -d/ -f1)            # by default, cut print all line if no delimiters
+    local THISDISPLAYMODE=$(echo "$1" | cut -d/ -f2 -s) # -s option: supress line with no delimiters
+    local HOSTNAME=$2
     shift 2
-    SWITCHNAMES=$*
+    local SWITCHNAMES=$*
     
-    HOSTFS="${FS[$SYSNAME]}"
+    local HOSTFS="${FS[$SYSNAME]}"
     [ -z "$HOSTFS" ] && echo "ERROR: Invalid config provided for \"$SYSNAME\"!" && exit 1
-    HOSTOPT="${QEMUOPT[$SYSNAME]}"
-    HOSTSYS="${SYS[$SYSNAME]}"
-    HOSTKERNEL="${KERNEL[$SYSNAME]}"
-    HOSTINITRD="${INITRD[$SYSNAME]}"
-    HOSTQCOW="$SESSIONDIR/$HOSTNAME.qcow2"
-    
+    local HOSTOPT="${QEMUOPT[$SYSNAME]}"
+    local HOSTSYS="${SYS[$SYSNAME]}"
+    local HOSTKERNEL="${KERNEL[$SYSNAME]}"
+    local HOSTINITRD="${INITRD[$SYSNAME]}"
+    local HOSTQCOW="$SESSIONDIR/$HOSTNAME.qcow2"
+    [ -z "$THISDISPLAYMODE" ] && local THISDISPLAYMODE="$DISPLAYMODE" # fallback to default
+
     # check SESSIONDIR
     if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory $SESSIONDIR does not exist!" ; exit 1 ; fi
     
@@ -649,7 +655,7 @@ HOST() {
     
     # accelerator option (by default)
     # if [ $ACCEL -eq 1 ] ; then CMD="$CMD -enable-kvm" ; fi
-    if [ $ACCEL -eq 1 ] ; then CMD="$CMD -M accel=kvm:hax:hvf -cpu host" ; fi
+    if [ $ACCEL -eq 1 ] ; then CMD="$CMD -M accel=kvm:hvf:hax -cpu host" ; fi
     
     # specific QEMU options
     CMD="$CMD $HOSTOPT"
@@ -719,47 +725,50 @@ HOST() {
 
     ### launch qemu command with different display mode (socket, xterm, graphic)
     
-    if [ "$QEMUDISPLAY" = "none" ] ; then # no display
+    if [ "$THISDISPLAYMODE" = "none" ] ; then # no display
         CMD="$CMD -nographic"
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}"
     # screen
-    elif [ "$QEMUDISPLAY" = "screen" ] ; then # no display
+    elif [ "$THISDISPLAYMODE" = "screen" ] ; then # no display
         CMD="$CMD -nographic"
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         screen -S "qemunet:$HOSTNAME" -d -m bash -c "${CMD[@]}" # detached
     # tmux
-    elif [ "$QEMUDISPLAY" = "tmux" ] ; then
+    elif [ "$THISDISPLAYMODE" = "tmux" ] ; then
         CMD="$CMD -nographic"
         echo "[$HOSTNAME] $CMD"
         TMUXID="qemunet"
         tmux new-window -t $TMUXID -n $HOSTNAME bash -c "${CMD[@]}" # detached
     # xterm
-    elif [ "$QEMUDISPLAY" = "xterm" -o "$QEMUDISPLAY" = "rxvt" -o "$QEMUDISPLAY" = "xfce4" -o "$QEMUDISPLAY" = "gnome" ] ; then
+    elif [ "$THISDISPLAYMODE" = "xterm" -o "$THISDISPLAYMODE" = "rxvt" -o "$THISDISPLAYMODE" = "xfce4" -o "$THISDISPLAYMODE" = "gnome" ] ; then
         CMD="$CMD -nographic"
-        XCMD=$(TERMCMD $HOSTNAME)
+        XCMD=$(TERMCMD $THISDISPLAYMODE $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
         $XCMD "${CMD[@]}" &
     # vnc
-    elif [ "$QEMUDISPLAY" = "vnc" ] ; then
+    elif [ "$THISDISPLAYMODE" = "vnc" ] ; then
         VNCPORT=5900            # default port for VNC
         ((VNCPORT+=HOSTNUM))
         CMD="$CMD -vnc :$HOSTNUM -usb -device usb-tablet"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
-        [ $REMOTEVIEWER -eq 1 ] && remote-viewer vnc://localhost:$VNCPORT &
+        RVCMD="remote-viewer vnc://localhost:$VNCPORT"
+        [ $REMOTEVIEWER -eq 1 ] && echo "[$HOSTNAME] $RVCMD" && $RVCMD &
     # spice
-    elif [ "$QEMUDISPLAY" = "spice" ] ; then
+    elif [ "$THISDISPLAYMODE" = "spice" ] ; then
         SPICEPORT=5900
         ((SPICEPORT+=HOSTNUM))
         CMD="$CMD -vga qxl -spice port=$SPICEPORT,addr=127.0.0.1,disable-ticketing"
+        # SPICEOPT are useful for copy & paste based on vdagent installed in guest...
         SPICEOPT="-device virtio-serial -chardev spicevmc,id=vdagent,name=vdagent -device virtserialport,chardev=vdagent,name=com.redhat.spice.0"
         CMD="$CMD $SPICEOPT"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
-        [ $REMOTEVIEWER -eq 1 ] && remote-viewer spice://localhost:$SPICEPORT &
+        RVCMD="remote-viewer spice://localhost:$SPICEPORT"
+        [ $REMOTEVIEWER -eq 1 ] && echo "[$HOSTNAME] $RVCMD" && $RVCMD &
     # standard / graphic mode
     else
         echo "[$HOSTNAME] $CMD"
@@ -809,7 +818,7 @@ TRUNK(){
 ### BG ###
 
 BG() {
-    # background current script! 
+    # background current script!
     # https://unix.stackexchange.com/questions/403895/automatically-move-a-script-into-the-background
     # FIXME: sometimes... BG fail?!
     echo "ME=$$"
@@ -874,7 +883,11 @@ START() {
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
 
+<<<<<<< HEAD
     # if [ "$QEMUDISPLAY" = "tmux" ] ; then
+=======
+    # if [ "$DISPLAYMODE" = "tmux" ] ; then
+>>>>>>> master
     #     # $QEMUNETDIR/misc/tmux-attach.sh
     #     # sleep 900
     #     sleep infinity

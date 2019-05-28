@@ -2,9 +2,9 @@
 
 SWITCH s1
 SWITCH s2
-HOST debian10x debianx s1
-HOST debian10 gw s1 s2 
-HOST kali kali s2
+HOST debian10x/spice host1 s1
+HOST debian10/xterm host2 s1 s2
+HOST win10/spice host3 s2
 
 
 
