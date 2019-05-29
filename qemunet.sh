@@ -884,11 +884,7 @@ START() {
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
 
-<<<<<<< HEAD
-    # if [ "$QEMUDISPLAY" = "tmux" ] ; then
-=======
     # if [ "$DISPLAYMODE" = "tmux" ] ; then
->>>>>>> master
     #     # $QEMUNETDIR/misc/tmux-attach.sh
     #     # sleep 900
     #     sleep infinity
