@@ -116,8 +116,9 @@ URL[debian]="http://aurelien.esnard.emi.u-bordeaux.fr/qemunet/debian.tgz"
 Following, you can launch your Virtual Network (VN). All the current session files are provided in the *session* directory, that is linked to a unique directory in /tmp.
 
 ```bash
-./qemunet.sh -t images/debian/lan.topo
+./qemunet.sh -t demo/lan.topo
 ```
+
 Once you have finish your work, halt all machines properly with "poweroff" command. Thus, you are sure that all VM disks are up-to-date. 
 
 If you want to restore your session from the current session directory, you can simply type:
@@ -137,7 +138,7 @@ So, you will be able to restore your session later as follow:
 ```bash
 ./qemunet.sh -s lan.tgz
 ```
-  
+
 For instance, if you modify the system files of the VM *host1*, those modifications will not modify directly the raw system image *debian.img* (provided in *qemunet.cfg*), but it will store it the file *session/host1.qcow2*.
 
 In addition, we use a startup script to load a user-defined script "/mnt/host/start.sh", that is stored in the file *session/<hostname>/start.sh*. It is a flexible way to setup each VM without modifying the raw system image or using the qcow2 files (that depends on the raw image). For instance, you can start the LAN demo with all IPs and hostnames well configured:
