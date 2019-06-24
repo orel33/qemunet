@@ -480,35 +480,67 @@ LOADCONF() {
 
 DOWNLOAD() {
 
-    SYSNAME=$1
-    HOSTFS="${FS[$SYSNAME]}"
-    [ -z "$HOSTFS" ] && echo "ERROR: invalid config provided for \"$SYSNAME\"!" && exit 1
-    HOSTFSDIR=$(dirname  $HOSTFS)
-    HOSTFSTGZ="$HOSTFSDIR/$SYSNAME.tgz"
-    HOSTURL=${URL[$SYSNAME]}
+    local SYSNAME=$1
+    local FORCECHECK=0
+    [ $# -eq 2 ] && local FORCECHECK=$2
+    local HOSTFS="${FS[$SYSNAME]}"
+    [ -z "$HOSTFS" ] && echo "ERROR: unknown system name \"$SYSNAME\"!" && exit 1
+    local HOSTFSDIR=$(dirname  $HOSTFS)
+    local HOSTFSTGZ="$HOSTFSDIR/$SYSNAME.tgz"
+    local HOSTURL=${URL[$SYSNAME]}
+    local HOSTMD5SUM="$HOSTFSDIR/$SYSNAME.md5sum"
+    local HOSTMD5SUMURL=""
 
-    # FS OK
-    if [ -r "$HOSTFS" ] ; then 
-        echo "=> Image for \"$SYSNAME\" already downloaded :-)"
-        return 
+    # check if host file already exists
+    if [ -r "$HOSTFS" ] ; then
+        echo "=> Image for \"$SYSNAME\" already exists..."
+        [ $FORCECHECK -eq 0 ] && return
     fi
 
-    # Download disk image
-    if [ ${URL[$SYSNAME]+_} ] ; then
-        # if [ ! -r "$HOSTFSTGZ" ] ; then
-        echo "=> Downloading \"$SYSNAME\" image from $HOSTURL..."
-        $WGET --continue --show-progress -q -nc $HOSTURL -O $HOSTFSTGZ
-        #fi
-    else
-        echo "ERROR: raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system and no URL provided to download it!"
-        exit 1
+    # Download system image
+    if [ ! -r "$HOSTFSTGZ" -a -n "$HOSTURL" ] ; then
+        echo -n "=> Downloading \"$SYSNAME\" image from $HOSTURL... "
+        $WGET -q --show-progress -P $QEMUNETDIR/images $HOSTURL
+        RET=$?
+        if [ $RET -eq 0 ] ; then
+            echo "success!" ; rm -f $HOSTFS
+        else
+            echo "failure!"
+        fi
     fi
-    
+
+    # if [ ${URL[$SYSNAME]+_} ] ; then
+    #     echo "=> Downloading \"$SYSNAME\" image from $HOSTURL"
+    #     $WGET --continue --show-progress -q -nc $HOSTURL -O $HOSTFSTGZ
+    # else
+    #     echo "ERROR: raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system and no URL provided to download it!"
+    #     exit 1
+    # fi
+
+    # Download checksum file
+    if [ -n "$HOSTURL" ] ; then
+        local HOSTMD5SUMURL="$(dirname $HOSTURL)/$SYSNAME.md5sum"
+        [ -f "$HOSTMD5SUM" ] && rm -f $HOSTMD5SUM
+        echo -n "=> Downloading checksum file for \"$SYSNAME\"... "
+        $WGET -q -P $QEMUNETDIR/images $HOSTMD5SUMURL &> /dev/null
+        if [ $? -eq 0 ] ; then echo "success!" ; else echo "failure!" ; fi
+    fi
+
+    # Check host image
+    if [ -r "$HOSTFSTGZ" -a -r "$HOSTMD5SUM" ] ; then
+        echo -n "=> Compare MD5 checksum for \"$SYSNAME\"... "
+        ( cd $QEMUNETDIR/images && md5sum --status -c $SYSNAME.md5sum ) &> /dev/null
+        if [ $? -eq 0 ] ; then echo "success!" ; else echo "failure!" ; fi
+    fi
+
     # Uncompress disk image
     if [ -r "$HOSTFSTGZ" -a ! -r "$HOSTFS" ] ; then
-        echo "=> Extracting disk image from archive for system $SYSNAME. Please, be patient..."
-        tar xzf $HOSTFSTGZ -C $HOSTFSDIR
+        echo -n "=> Extracting host image for $SYSNAME... "
+        tar xzf $HOSTFSTGZ -C $HOSTFSDIR &> /dev/null
+        if [ $? -eq 0 ] ; then echo "success!" ; else echo "failure!" ; fi
     fi
+
+    return 0
 }
 
 
@@ -873,7 +905,8 @@ START() {
         INITSESSION
         HOST "$THESYSNAME" "$THESYSNAME"
     elif [ "$MODE" = "DOWNLOAD" ] ; then
-        DOWNLOAD "$THESYSNAME" && exit 0
+        DOWNLOAD "$THESYSNAME" 1    # FORCE MD5 CHECKSUM
+        exit 0
     else
         echo "ERROR: Invalid QemuNet mode \"$MODE\"!"
     fi

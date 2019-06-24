@@ -300,6 +300,10 @@ The idea is to give my students an easy solution to use Virtual Network @ Home a
 
 Follow branch qemunetweb on github.
 
+### TODO
+
+* add a "-e" option to manually enable an Ethernet network card... (Useful when using -l or -L ?)
+
 ### Contact Me
 
 <mailto:aurelien.esnard@u-bordeaux.fr>
