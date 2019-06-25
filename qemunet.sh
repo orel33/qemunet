@@ -688,7 +688,7 @@ HOST() {
     
     # accelerator option (by default)
     # if [ $ACCEL -eq 1 ] ; then CMD="$CMD -enable-kvm" ; fi
-    if [ $ACCEL -eq 1 ] ; then CMD="$CMD -M accel=kvm:hvf:hax -cpu host" ; fi
+    if [ $ACCEL -eq 1 ] ; then CMD="$CMD -M accel=kvm:hvf:hax" ; fi # TODO: add option "-cpu host" here or in qemunet.cfg
     
     # specific QEMU options
     CMD="$CMD $HOSTOPT"
