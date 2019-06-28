@@ -1,0 +1,23 @@
+### Y Chain
+#
+#  opeth \
+#          [s1] - immortal - [s2] - grave - [s3] -  syl
+#  nile  /
+#
+#
+
+# switches
+
+SWITCH s1
+SWITCH s2
+SWITCH s3
+
+
+HOST debian/xterm  immortal s1 s2
+HOST debian/xterm  grave    s2 s3
+HOST debianx       syl      s3
+
+# sleep before DHCP server starts
+sleep 5
+HOST debian/xterm  opeth    s1
+HOST debianx       nile     s1

@@ -4,7 +4,7 @@
 
 SCRIPTDIR=$(dirname $(realpath $0))
 SRCDIR=$1
-ARCHIVE=$2
+ARCHIVE=$(realpath $2)
 TMPDIR=$(mktemp -d)
 
 echo "SRCDIR: $SRCDIR"
@@ -24,6 +24,6 @@ for HOST in $TMPDIR/* ; do
     fi
 done
 
-( cd $TMPDIR && tar cvzSf $ARCHIVE * )
-mv $TMPDIR/$ARCHIVE .
+( cd $TMPDIR && tar cvzSf archive.tgz * )
+mv $TMPDIR/archive.tgz $ARCHIVE
 echo "Done!"
