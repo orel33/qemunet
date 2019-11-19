@@ -79,11 +79,11 @@ TERMCMD () {
     local THISNAME="$2"
     if [ "$THISTERM" = "xterm" ] ; then
         echo "xterm -fg white -bg black -T $THISNAME -e" ;
-    elif [ "$THISTERM" = "rxvt" ] ; then
+        elif [ "$THISTERM" = "rxvt" ] ; then
         echo "rxvt -bg Black -fg White -title $THISNAME -e bash -c" ;
-    elif [ "$THISTERM" = "gnome" ] ; then
+        elif [ "$THISTERM" = "gnome" ] ; then
         echo "gnome-terminal -- bash -c" ;
-    elif [ "$THISTERM" = "xfce4" ] ; then
+        elif [ "$THISTERM" = "xfce4" ] ; then
         echo "xfce4-terminal -T $THESYSNAME -x bash -c" ;
     else
         echo "ERROR: Invalid terminal display mode \"$THISTERM\"!"
@@ -272,7 +272,7 @@ CHECKRC() {
         echo "ERROR: QEMU version must be greater than or equal to 2.1!"
         exit 1
     fi
-        
+    
     # check RC for QEMU & VDE
     if ! [ -x "$(type -P $QEMU)" ] ; then
         echo "ERROR: $QEMU not found!"
@@ -320,7 +320,7 @@ CHECKRC() {
                 echo "ERROR: Accelerator not available for QEMU!"
                 exit 1
             fi
-        elif [[ "$OSTYPE" == "darwin"* ]] ; then
+            elif [[ "$OSTYPE" == "darwin"* ]] ; then
             # TODO: what to check?
             echo "Accelerator: HVF enabled (maybe?)"
         else
@@ -340,7 +340,7 @@ CHECKRC() {
         which virsh &> /dev/null
         [ $? -ne 0 ] && echo "ERROR: virsh not found, but required for -m option!" && exit 1
     fi
-
+    
     # check remote-viewer for VNC or SPICE display mode
     if [ $REMOTEVIEWER -eq 1 ] ; then
         if ! [ -x  "$(type -P remote-viewer)" ] ; then
@@ -348,7 +348,7 @@ CHECKRC() {
             exit 1
         fi
     fi
-
+    
     # check libguestfs-tools for -C option
     # if [ $COPYIN -eq 1 ] ; then
     #     which virt-copy-in &> /dev/null
@@ -360,12 +360,12 @@ CHECKRC() {
 ### 2) INIT SESSION ###
 
 INITSESSION() {
-
+    
     echo "********** Starting QemuNet Session **********"
-
+    
     ### special tmux init
     if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
-
+    
     ### init session directory
     if [ -z "$SESSIONDIR" ] ; then SESSIONDIR="/tmp/$SESSIONID" ; mkdir -p $SESSIONDIR ; fi
     if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory \"$SESSIONDIR\" does not exist!" ; exit 1 ; fi
@@ -479,7 +479,7 @@ LOADCONF() {
 ### DOWNLOAD SYSTEM IMAGE ###
 
 DOWNLOAD() {
-
+    
     local SYSNAME=$1
     local FORCECHECK=0
     [ $# -eq 2 ] && local FORCECHECK=$2
@@ -490,13 +490,13 @@ DOWNLOAD() {
     local HOSTURL=${URL[$SYSNAME]}
     local HOSTMD5SUM="$HOSTFSDIR/$SYSNAME.md5sum"
     local HOSTMD5SUMURL=""
-
+    
     # check if host file already exists
     if [ -r "$HOSTFS" ] ; then
         echo "=> Image for \"$SYSNAME\" already exists..."
         [ $FORCECHECK -eq 0 ] && return
     fi
-
+    
     # Download system image
     if [ ! -r "$HOSTFSTGZ" -a -n "$HOSTURL" ] ; then
         echo -n "=> Downloading \"$SYSNAME\" image from $HOSTURL... "
@@ -508,7 +508,7 @@ DOWNLOAD() {
             echo "failure!"
         fi
     fi
-
+    
     # if [ ${URL[$SYSNAME]+_} ] ; then
     #     echo "=> Downloading \"$SYSNAME\" image from $HOSTURL"
     #     $WGET --continue --show-progress -q -nc $HOSTURL -O $HOSTFSTGZ
@@ -516,7 +516,7 @@ DOWNLOAD() {
     #     echo "ERROR: raw image file \"$HOSTFS\" not found for \"$SYSNAME\" system and no URL provided to download it!"
     #     exit 1
     # fi
-
+    
     # Download checksum file
     if [ -n "$HOSTURL" ] ; then
         local HOSTMD5SUMURL="$(dirname $HOSTURL)/$SYSNAME.md5sum"
@@ -525,21 +525,21 @@ DOWNLOAD() {
         $WGET -q -P $QEMUNETDIR/images $HOSTMD5SUMURL &> /dev/null
         if [ $? -eq 0 ] ; then echo "success!" ; else echo "failure!" ; fi
     fi
-
+    
     # Check host image
     if [ -r "$HOSTFSTGZ" -a -r "$HOSTMD5SUM" ] ; then
         echo -n "=> Compare MD5 checksum for \"$SYSNAME\"... "
         ( cd $QEMUNETDIR/images && md5sum --status -c $SYSNAME.md5sum ) &> /dev/null
         if [ $? -eq 0 ] ; then echo "success!" ; else echo "failure!" ; fi
     fi
-
+    
     # Uncompress disk image
     if [ -r "$HOSTFSTGZ" -a ! -r "$HOSTFS" ] ; then
         echo -n "=> Extracting host image for $SYSNAME... "
         tar xzf $HOSTFSTGZ -C $HOSTFSDIR &> /dev/null
         if [ $? -eq 0 ] ; then echo "success!" ; else echo "failure!" ; fi
     fi
-
+    
     return 0
 }
 
@@ -678,7 +678,7 @@ HOST() {
     local HOSTINITRD="${INITRD[$SYSNAME]}"
     local HOSTQCOW="$SESSIONDIR/$HOSTNAME.qcow2"
     [ -z "$THISDISPLAYMODE" ] && local THISDISPLAYMODE="$DISPLAYMODE" # fallback to default
-
+    
     # check SESSIONDIR
     if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory $SESSIONDIR does not exist!" ; exit 1 ; fi
     
@@ -712,6 +712,9 @@ HOST() {
             HOSTMOUNTDISK="$SESSIONDIR/$HOSTNAME.disk"
             # [ -f "$HOSTMOUNTDISK" ] && CMD="$CMD -hdb $HOSTMOUNTDISK"
             [ -f "$HOSTMOUNTDISK" ] && CMD="$CMD -drive file=$HOSTMOUNTDISK,format=raw,index=1,media=disk"
+            # [ -f "$HOSTMOUNTDISK" ] && CMD="$CMD -usb -usbdevice disk:raw:$HOSTMOUNTDISK" # deprecated
+            # [ -f "$HOSTMOUNTDISK" ] && CMD="$CMD -device piix3-usb-uhci -drive id=usbdisk,file=$HOSTMOUNTDISK,format=raw,if=none -device usb-storage,drive=usbdisk"
+            # [ -f "$HOSTMOUNTDISK" ] && CMD="$CMD -device nec-usb-xhci,id=xhci -drive id=usbdisk,file=$HOSTMOUNTDISK,format=raw,if=none -device usb-storage,bus=xhci.0,drive=usbdisk"
         fi
         # # copy files inside VM
         # if [ $COPYIN -eq 1 ] ; then
@@ -750,11 +753,11 @@ HOST() {
         # CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS $OPTKERNELARGS'"
     fi
-
+    
     # store qemu pid in file
-
+    
     CMD="$CMD -pidfile $SESSIONDIR/$HOSTNAME.pid"
-
+    
     ### launch qemu command with different display mode (socket, xterm, graphic)
     
     if [ "$THISDISPLAYMODE" = "none" ] ; then # no display
@@ -762,26 +765,26 @@ HOST() {
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}"
-    # screen
-    elif [ "$THISDISPLAYMODE" = "screen" ] ; then # no display
+        # screen
+        elif [ "$THISDISPLAYMODE" = "screen" ] ; then # no display
         CMD="$CMD -nographic"
         # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         screen -S "qemunet:$HOSTNAME" -d -m bash -c "${CMD[@]}" # detached
-    # tmux
-    elif [ "$THISDISPLAYMODE" = "tmux" ] ; then
+        # tmux
+        elif [ "$THISDISPLAYMODE" = "tmux" ] ; then
         CMD="$CMD -nographic"
         echo "[$HOSTNAME] $CMD"
         TMUXID="qemunet"
         tmux new-window -t $TMUXID -n $HOSTNAME bash -c "${CMD[@]}" # detached
-    # xterm
-    elif [ "$THISDISPLAYMODE" = "xterm" -o "$THISDISPLAYMODE" = "rxvt" -o "$THISDISPLAYMODE" = "xfce4" -o "$THISDISPLAYMODE" = "gnome" ] ; then
+        # xterm
+        elif [ "$THISDISPLAYMODE" = "xterm" -o "$THISDISPLAYMODE" = "rxvt" -o "$THISDISPLAYMODE" = "xfce4" -o "$THISDISPLAYMODE" = "gnome" ] ; then
         CMD="$CMD -nographic"
         XCMD=$(TERMCMD $THISDISPLAYMODE $HOSTNAME)
         echo "[$HOSTNAME] $XCMD $CMD"
         $XCMD "${CMD[@]}" &
-    # vnc
-    elif [ "$THISDISPLAYMODE" = "vnc" ] ; then
+        # vnc
+        elif [ "$THISDISPLAYMODE" = "vnc" ] ; then
         VNCPORT=5900            # default port for VNC
         ((VNCPORT+=HOSTNUM))
         CMD="$CMD -vnc :$HOSTNUM -usb -device usb-tablet"
@@ -789,8 +792,8 @@ HOST() {
         bash -c "${CMD[@]}" &
         RVCMD="remote-viewer vnc://localhost:$VNCPORT"
         [ $REMOTEVIEWER -eq 1 ] && echo "[$HOSTNAME] $RVCMD" && $RVCMD &
-    # spice
-    elif [ "$THISDISPLAYMODE" = "spice" ] ; then
+        # spice
+        elif [ "$THISDISPLAYMODE" = "spice" ] ; then
         SPICEPORT=5900
         ((SPICEPORT+=HOSTNUM))
         CMD="$CMD -vga qxl -spice port=$SPICEPORT,addr=127.0.0.1,disable-ticketing"
@@ -801,16 +804,16 @@ HOST() {
         bash -c "${CMD[@]}" &
         RVCMD="remote-viewer spice://localhost:$SPICEPORT"
         [ $REMOTEVIEWER -eq 1 ] && echo "[$HOSTNAME] $RVCMD" && $RVCMD &
-    # standard / graphic mode
+        # standard / graphic mode
     else
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
     fi
-
+    
     # save qemu command
     CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
     echo $CMD > $CMDFILE
-
+    
     PID=$!
     
     # echo "[$HOSTNAME] pid $PID"
@@ -840,9 +843,9 @@ TRUNK(){
     
     # a strange behavior was observed with the following command, thus we need to move to a writable directory before calling dpipe ...
     echo "[$SWITCH1]---[$SWITCH2] dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2"
-    (cd $SESSIONDIR; dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2  >& /dev/null &)
+    (cd $SESSIONDIR; dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SESSIONDIR/switch/$SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SESSIONDIR/switch/$SWITCH2  >& /dev/null &)
     
-    PID=$!
+    PID=$!  # FIXME: use pid of dpipe command instead of subshell?
     # TRUNKPIDS="$TRUNKPIDS $PID"
     echo $PID > $SESSIONDIR/trunk_$SWITCH1_$SWITCH2.pid
 }
@@ -873,12 +876,12 @@ WAIT() {
     # echo "=> To halt properly each virtual machine, type \"poweroff\", else press ctrl-c here!"
     echo "sleep... press ctrl-c to end me!"
     # [ $BACKGROUND -eq 1 ] && BG
-    # if [ $BACKGROUND -eq 1 ] ; then 
+    # if [ $BACKGROUND -eq 1 ] ; then
     #     kill -STOP $$
     #     kill -CONT $$
     #     # echo "not yet stopped!"
-    #     fi 
-
+    #     fi
+    
     while true; do sleep 1000; done
 }
 
@@ -900,11 +903,11 @@ START() {
         [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
         INITSESSION
         source $TOPOLOGY
-    elif [ "$MODE" = "STANDALONE" ] ; then
+        elif [ "$MODE" = "STANDALONE" ] ; then
         [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
         INITSESSION
         HOST "$THESYSNAME" "$THESYSNAME"
-    elif [ "$MODE" = "DOWNLOAD" ] ; then
+        elif [ "$MODE" = "DOWNLOAD" ] ; then
         DOWNLOAD "$THESYSNAME" 1    # FORCE MD5 CHECKSUM
         exit 0
     else
@@ -912,10 +915,10 @@ START() {
     fi
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
     [ $BACKGROUND -eq 0 ] && WAIT
-
+    
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
-
+    
     # if [ "$DISPLAYMODE" = "tmux" ] ; then
     #     # $QEMUNETDIR/misc/tmux-attach.sh
     #     # sleep 900
