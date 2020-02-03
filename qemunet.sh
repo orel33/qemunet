@@ -31,7 +31,8 @@ fi
 ### QEMUNET CONFIG ###
 
 QEMUNET="$0"
-QEMUNETDIR="$(realpath $(dirname $QEMUNET))"
+# QEMUNETDIR="$(realpath $(dirname $QEMUNET))"
+QEMUNETDIR="$(dirname $(readlink -f $QEMUNET))"
 QEMUNETCFG="$QEMUNETDIR/qemunet.cfg"
 
 ### PARAMETERS ###
