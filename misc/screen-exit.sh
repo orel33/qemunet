@@ -1,3 +1,4 @@
 #!/bin/bash
-TMUXID="qemunet"
-screen -ls | grep $TMUXID | cut -d. -f1 | xargs kill
+SCREENID="qemunet"
+echo "=> Cleaning screen session"
+screen -ls | grep $SCREENID | cut -d. -f1 | xargs kill

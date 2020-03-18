@@ -64,6 +64,7 @@ SWITCHTERM=0
 DISPLAYMODE="graphic"   # xterm or rxvt or tmux or graphic or ...
 BACKGROUND=0
 REMOTEVIEWER=0          # remote viewer for VNC or SPICE server/display
+VERBOSE=0
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
@@ -131,7 +132,7 @@ USAGE() {
     echo "    -l <sysname>: launch a VM in standalone mode to test it..."
     echo "    -L <sysname>: launch a VM in standalone mode using raw disk image (warning: image will be modified)"
     echo "    -D <sysname>: download system image from URL provided in config file"
-    echo "    -b: run qemunet as a background command"
+    echo "    -b: run qemunet as a background command (experimental)"
     echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)"
     echo "    -M: disable mount directory"
     echo "    -f: mount extra disk <session directory>/<hostname>.disk (default)"
@@ -442,6 +443,9 @@ LOADCONF() {
         echo "ERROR: File $QEMUNETCFG is missing!"
         exit 1
     fi
+    
+    echo "Loading VM Config File: $QEMUNETCFG"
+    [ $VERBOSE -eq 0 ] && return
     
     # PRINT VM CONF
     for SYSNAME in "${!FS[@]}"; do
@@ -891,6 +895,8 @@ WAIT() {
 
 EXIT() {
     source $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR
+    if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
+    if [ "$QEMUDISPLAY" = "screen" ] ; then $QEMUNETDIR/misc/screen-exit.sh ; fi
 }
 
 ### START ###
@@ -901,12 +907,11 @@ START() {
     echo "********** Loading VM Config **********"
     LOADCONF
     # echo "********** Init Session **********"
+    [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT # call exit if not background
     if [ "$MODE" = "SESSION" ] ; then
-        [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
         INITSESSION
         source $TOPOLOGY
         elif [ "$MODE" = "STANDALONE" ] ; then
-        [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
         INITSESSION
         HOST "$THESYSNAME" "$THESYSNAME"
         elif [ "$MODE" = "DOWNLOAD" ] ; then
@@ -916,19 +921,15 @@ START() {
         echo "ERROR: Invalid QemuNet mode \"$MODE\"!"
     fi
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
-    [ $BACKGROUND -eq 0 ] && WAIT
     
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     
-    # if [ "$DISPLAYMODE" = "tmux" ] ; then
-    #     # $QEMUNETDIR/misc/tmux-attach.sh
-    #     # sleep 900
-    #     sleep infinity
-    # else
-    # WAIT
-    # END
-    # fi
+    ### TMUX
+    if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-attach.sh ; fi
+    # if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-attach.sh ; fi # TODO: ???
+    
+    [ $BACKGROUND -eq 0 ] && WAIT
     # trap call EXIT at regular exit!
 }
 
