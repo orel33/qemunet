@@ -750,7 +750,7 @@ HOST() {
     # load external linux kernel (if available)
     if [ "$HOSTSYS" = "linux" -a -r "$HOSTKERNEL" -a -r "$HOSTINITRD" ] ; then
         # append kernel args
-        KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0" # both tty0 and ttyS0 are useful
+        KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0 quiet systemd.show_status=0" # both tty0 and ttyS0 are useful
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         # CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS $OPTKERNELARGS'"
