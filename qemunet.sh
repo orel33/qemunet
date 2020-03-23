@@ -65,6 +65,7 @@ DISPLAYMODE="graphic"   # xterm or rxvt or tmux or graphic or ...
 BACKGROUND=0
 REMOTEVIEWER=0          # remote viewer for VNC or SPICE server/display
 VERBOSE=0
+RECOVER=0
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
@@ -124,7 +125,7 @@ USAGE() {
     echo "       * gnome: same as xterm mode, but using gnome-terminal instead"
     echo "       * xfce4: same as xterm mode, but using xfce4-terminal instead"
     echo "       * tmux: QEMU serial/text mode running within a tmux session (experimental)"
-    echo "       * screen: QEMU serial/text mode running within a screen session (experimental)"
+    echo "       * screen: QEMU serial/text mode running within a screen session (very experimental)"
     echo "       * vnc: use QEMU VNC display (experimental)"
     echo "       * spice: use QEMU SPICE display (experimental)"
     echo "       * none: no graphic (experimental)"
@@ -144,13 +145,14 @@ USAGE() {
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
+    echo "    -r: recover tmux session (very experimental)"
     exit 0
 }
 
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:V" OPT; do
+    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:rV" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -234,6 +236,10 @@ GETARGS() {
             ;;
             b)
                 BACKGROUND=1
+            ;;
+            r)
+                MODE="SESSION"
+                RECOVER=1
             ;;
             h)
                 USAGE
@@ -365,9 +371,6 @@ CHECKRC() {
 INITSESSION() {
     
     echo "********** Starting QemuNet Session **********"
-    
-    ### special tmux init
-    if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
     
     ### init session directory
     if [ -z "$SESSIONDIR" ] ; then SESSIONDIR="/tmp/$SESSIONID" ; mkdir -p $SESSIONDIR ; fi
@@ -915,8 +918,23 @@ START() {
     CHECKRC
     echo "********** Loading VM Config **********"
     LOADCONF
-    # echo "********** Init Session **********"
+    
+    # start tmux
+    if [ "$DISPLAYMODE" = "tmux" ] ; then
+        $QEMUNETDIR/misc/tmux-start.sh
+        [ $? -ne 0 ] && echo "ERROR: TMUX start failure!" && exit 1
+    fi
+    
+    # recover tmux
+    if [ $RECOVER -eq 1 ] ; then
+        $QEMUNETDIR/misc/tmux-attach.sh
+        [ $? -ne 0 ] && echo "ERROR: TMUX recover failure!" && exit 1
+    fi
+    
+    # trap exit of foreground session
     [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT # call exit if not background
+    
+    # echo "********** Init Session **********"
     if [ "$MODE" = "SESSION" ] ; then
         INITSESSION
         source $TOPOLOGY
@@ -934,7 +952,7 @@ START() {
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     
-    ### TMUX
+    # attac tmux
     if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-attach.sh ; fi
     # if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-attach.sh ; fi # TODO: ???
     

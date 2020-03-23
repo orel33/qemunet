@@ -1,13 +1,18 @@
 #!/bin/bash
 QEMUNETDIR="$(realpath $(dirname $0)/..)"
 TMUXID="qemunet"
+
+# check if session is alive...
+tmux has-session -t $TMUXID &> /dev/null
+[ $? -ne 1 ] && echo "ERROR: TMUX session \"$TMUXID\" already available!" && exit 1
+
 tmux start-server
 tmux new-session -d -s $TMUXID -n console bash # tmux console #TODO: how to remove this console?
 tmux set-option -t $TMUXID -g default-shell /bin/bash
 tmux set-option -t $TMUXID -g mouse on # enable to select panes/windows  with mouse (howewer, hold shift key, to copy/paste with mouse)
 # tmux set-option -g prefix C-b
 tmux bind-key C-c kill-session  # press "C-b C-c" to kill session!
-tmux set-window-option -g window-status-current-bg red
+# tmux set-window-option -g window-status-current-bg red
 tmux set-window-option -g aggressive-resize on
 # tmux set-option -g allow-rename off
 tmux set-option -g status-left ''
