@@ -578,9 +578,17 @@ SWITCH() {
     PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
-    CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"
     echo "[$SWITCHNAME] $CMD"
-    $CMD
+    
+    if [ "$DISPLAYMODE" = "tmux" ] ; then
+        CMD="$VDESWITCH -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"       # disable daemon mode
+        TMUXID="qemunet"
+        tmux new-window -t $TMUXID -n $SWITCHNAME bash -c "${CMD[@]}" # detached
+    else
+        CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"    # daemon mode
+        $CMD
+    fi
+    
     # PID=$(cat $PIDFILE)
     # SWITCHPIDS="$PID $SWITCHPIDS"
     SWPORTNUM[$SWITCHNAME]=1
@@ -605,7 +613,7 @@ HUB() {
     PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
-    CMD="$VDESWITCH -daemon -s $SWITCHDIR -p $PIDFILE -hub"
+    CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -hub"
     echo "[$SWITCHNAME] $CMD"
     $CMD
     # PID=$(cat $PIDFILE)
