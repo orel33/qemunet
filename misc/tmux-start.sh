@@ -1,15 +1,18 @@
 #!/bin/bash
 QEMUNETDIR="$(realpath $(dirname $0)/..)"
 TMUXID="qemunet"
-TMUXTIMEOUT="2h"       # default tmux timeout (2h)
 
 # check if session is alive...
 tmux has-session -t $TMUXID &> /dev/null
-[ $? -ne 1 ] && echo "ERROR: TMUX session \"$TMUXID\" already available!" && exit 1
+if [ $? -ne 1 ] ; then
+    echo "ERROR: a TMUX session \"$TMUXID\" is already available!"
+    echo "=> either attach (\"tmux a\") or kill session (\"tmux kill-session\")"
+    exit 1
+fi
 
 tmux start-server
 tmux new-session -d -s $TMUXID -n console bash # tmux console #TODO: how to remove this console?
-tmux run-shell -t $TMUXID -b 'sleep 30s ; tmux kill-server'  # run a background command...
+tmux run-shell -t $TMUXID -b 'sleep 2h ; tmux kill-server'  # run a background command...
 
 tmux set-option -t $TMUXID -g default-shell /bin/bash
 tmux set-option -t $TMUXID -g mouse on # enable to select panes/windows  with mouse (howewer, hold shift key, to copy/paste with mouse)

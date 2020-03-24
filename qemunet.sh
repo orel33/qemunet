@@ -954,6 +954,7 @@ START() {
     # attach tmux
     # if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-attach.sh ; fi
     # if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-attach.sh ; fi # TODO: ???
+    if [ "$DISPLAYMODE" = "tmux" ] ; then echo "=> Just launch command \"tmux a\" to attach TMUX session..." ; fi
     
     [ $BACKGROUND -eq 0 ] && WAIT
     # trap call EXIT at regular exit!
