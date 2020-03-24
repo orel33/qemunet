@@ -65,7 +65,8 @@ DISPLAYMODE="graphic"   # xterm or rxvt or tmux or graphic or ...
 BACKGROUND=0
 REMOTEVIEWER=0          # remote viewer for VNC or SPICE server/display
 VERBOSE=0
-RECOVER=0
+# RECOVER=0
+TMUXID="qemunet"        # tmux session ID
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
@@ -145,14 +146,14 @@ USAGE() {
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
-    echo "    -r: recover tmux session (very experimental)"
+    #    echo "    -r: recover tmux session (very experimental)"
     exit 0
 }
 
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:rV" OPT; do
+    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:V" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -237,10 +238,10 @@ GETARGS() {
             b)
                 BACKGROUND=1
             ;;
-            r)
-                MODE="SESSION"
-                RECOVER=1
-            ;;
+            # r)
+            #     MODE="SESSION"
+            #     RECOVER=1
+            # ;;
             h)
                 USAGE
             ;;
@@ -585,7 +586,6 @@ SWITCH() {
     
     if [ "$DISPLAYMODE" = "tmux" ] ; then
         CMD="$VDESWITCH -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"       # disable daemon mode
-        TMUXID="qemunet"
         tmux new-window -t $TMUXID -n $SWITCHNAME bash -c "${CMD[@]}" # detached
     else
         CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"    # daemon mode
@@ -792,7 +792,6 @@ HOST() {
         elif [ "$THISDISPLAYMODE" = "tmux" ] ; then
         CMD="$CMD -nographic"
         echo "[$HOSTNAME] $CMD"
-        TMUXID="qemunet"
         tmux new-window -t $TMUXID -n $HOSTNAME bash -c "${CMD[@]}" # detached
         # xterm
         elif [ "$THISDISPLAYMODE" = "xterm" -o "$THISDISPLAYMODE" = "rxvt" -o "$THISDISPLAYMODE" = "xfce4" -o "$THISDISPLAYMODE" = "gnome" ] ; then
@@ -926,10 +925,10 @@ START() {
     fi
     
     # recover tmux
-    if [ $RECOVER -eq 1 ] ; then
-        $QEMUNETDIR/misc/tmux-attach.sh
-        [ $? -ne 0 ] && echo "ERROR: TMUX recover failure!" && exit 1
-    fi
+    # if [ $RECOVER -eq 1 ] ; then
+    #     $QEMUNETDIR/misc/tmux-attach.sh
+    #     [ $? -ne 0 ] && echo "ERROR: TMUX recover failure!" && exit 1
+    # fi
     
     # trap exit of foreground session
     [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT # call exit if not background
@@ -952,8 +951,8 @@ START() {
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     
-    # attac tmux
-    if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-attach.sh ; fi
+    # attach tmux
+    # if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-attach.sh ; fi
     # if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-attach.sh ; fi # TODO: ???
     
     [ $BACKGROUND -eq 0 ] && WAIT
