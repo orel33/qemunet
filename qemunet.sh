@@ -906,8 +906,8 @@ WAIT() {
 EXIT() {
     echo "=> trap exit!"
     source $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR
-    if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
-    if [ "$QEMUDISPLAY" = "screen" ] ; then $QEMUNETDIR/misc/screen-exit.sh ; fi
+    if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
+    if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-exit.sh ; fi
 }
 
 ### START ###
