@@ -268,21 +268,6 @@ CHECKRC() {
     echo "SOCAT: $SOCAT"
     echo "WGET: $WGET"
     
-    # check QEMU version >= 2.1
-    QEMUVERSION=$($QEMU --version |head -1 | cut -d ' ' -f4-)
-    QEMUMAJOR=$(echo $QEMUVERSION | cut -d '.' -f1)
-    QEMUMINOR=$(echo $QEMUVERSION | cut -d '.' -f2)
-    echo "QEMU VERSION: $QEMUMAJOR.$QEMUMINOR ($QEMUVERSION)"
-    
-    if [ "$QEMUMAJOR" -lt "2" ] ; then
-        echo "ERROR: QEMU version must be greater than or equal to 2.1!"
-        exit 1
-    elif [ "$QEMUMAJOR" -eq "2" -a "$QEMUMINOR" -lt "1" ]
-    then
-        echo "ERROR: QEMU version must be greater than or equal to 2.1!"
-        exit 1
-    fi
-    
     # check RC for QEMU & VDE
     if ! [ -x "$(type -P $QEMU)" ] ; then
         echo "ERROR: $QEMU not found!"
@@ -296,6 +281,27 @@ CHECKRC() {
         echo "ERROR: $VDESWITCH not found!"
         exit 1
     fi
+    
+    ### TODO: check qemu version
+    # QEMUVERSION=$($QEMU --version |head -1 | cut -d ' ' -f4-)
+    # QEMUMAJOR=$(echo $QEMUVERSION | cut -d '.' -f1)
+    # QEMUMINOR=$(echo $QEMUVERSION | cut -d '.' -f2)
+    # echo "QEMU VERSION: $QEMUMAJOR.$QEMUMINOR ($QEMUVERSION)"
+    
+    # if [ "$QEMUMAJOR" -lt "2" ] ; then
+    #     echo "ERROR: QEMU version must be greater than or equal to 2.1!"
+    #     exit 1
+    # elif [ "$QEMUMAJOR" -eq "2" -a "$QEMUMINOR" -lt "1" ]
+    # then
+    #     echo "ERROR: QEMU version must be greater than or equal to 2.1!"
+    #     exit 1
+    # fi
+    
+    # check QEMU version >= 2.1
+    echo "QEMU VERSION"
+    $QEMU --version
+    # TODO: check it is >= 2.1
+    [ $? -ne 0 ] && echo "Error: fail to start $QEMU on this machine!" && exit 1
     
     # check wget
     if ! [ -x  "$(type -P $WGET)" ] ; then
