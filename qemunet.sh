@@ -409,7 +409,7 @@ INITSESSION() {
     # lock session
     LOCK="$SESSIONDIR/lock"
     if [ -e "$LOCK" ] ; then
-        echo "ERROR: Session Locked! Try to remove $LOCK file before restarting."
+        echo "ERROR: Session Locked! Remove $LOCK file before restarting."
         exit 1
     else
         touch $LOCK
@@ -425,6 +425,15 @@ INITSESSION() {
     echo "NETWORK TOPOLOGY: $TOPOLOGY"
     echo "SESSION ARCHIVE: $SESSIONARCHIVE"
     echo "EXTRA ARCHIVE: $EXTARCHIVE"
+    
+    ### START TMUX SERVER
+    if [ "$DISPLAYMODE" = "tmux" ] ; then
+        echo "=> Start tmux server (tmux session $TMUXID)"
+        $QEMUNETDIR/misc/tmux-start.sh $SESSIONDIR
+        [ $? -ne 0 ] && echo "ERROR: TMUX start failure!" && exit 1
+    fi
+    
+    
 }
 
 ### 3) LOAD CONF ###
@@ -582,13 +591,14 @@ SWITCH() {
     PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
-    echo "[$SWITCHNAME] $CMD"
     
     if [ "$DISPLAYMODE" = "tmux" ] ; then
         CMD="$VDESWITCH -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"       # disable daemon mode
+        echo "[$SWITCHNAME] $CMD"
         tmux new-window -t $TMUXID -n $SWITCHNAME bash -c "${CMD[@]}" # detached
     else
         CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"    # daemon mode
+        echo "[$SWITCHNAME] $CMD"
         $CMD
     fi
     
@@ -917,18 +927,6 @@ START() {
     CHECKRC
     echo "********** Loading VM Config **********"
     LOADCONF
-    
-    # start tmux
-    if [ "$DISPLAYMODE" = "tmux" ] ; then
-        $QEMUNETDIR/misc/tmux-start.sh
-        [ $? -ne 0 ] && echo "ERROR: TMUX start failure!" && exit 1
-    fi
-    
-    # recover tmux
-    # if [ $RECOVER -eq 1 ] ; then
-    #     $QEMUNETDIR/misc/tmux-attach.sh
-    #     [ $? -ne 0 ] && echo "ERROR: TMUX recover failure!" && exit 1
-    # fi
     
     # trap exit of foreground session
     [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT # call exit if not background
