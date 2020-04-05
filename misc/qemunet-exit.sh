@@ -11,15 +11,9 @@ echo "********** Exiting QemuNet Session **********"
 for pidfile in $SESSIONDIR/*.pid ; do
     PID=$(cat $pidfile)
     disown $PID 2> /dev/null
+    echo "killing $pidfile ($PID)"
     kill $PID 2> /dev/null
 done
-
-# FIXME: special clean for tmux & clean
-# tmux kill-session -t qemunet &> /dev/null
-# TODO: do the same for screen
-
-# if [ "$QEMUDISPLAY" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
-# if [ "$QEMUDISPLAY" = "screen" ] ; then $QEMUNETDIR/misc/screen-exit.sh ; fi
 
 # clean session files
 rm -rf $SESSIONDIR/switch

@@ -31,14 +31,16 @@ fi
 ### QEMUNET CONFIG ###
 
 QEMUNET="$0"
-QEMUNETDIR="$(realpath $(dirname $QEMUNET))"
+# QEMUNETDIR="$(realpath $(dirname $QEMUNET))"
+QEMUNETDIR="$(dirname $(readlink -f $QEMUNET))"
 QEMUNETCFG="$QEMUNETDIR/qemunet.cfg"
 
 ### PARAMETERS ###
 
 SESSIONID=$(mktemp -u -d qemunet-$USER-XXXXXX)
 SESSIONDIR=""
-SESSIONLINK="session" # session link to session directory
+# SESSIONLINK="session" # session link to session directory
+SESSIONLINK="$HOME/qemunet-session" # session link to session directory
 TOPOLOGY=""
 EXTARCHIVE=""
 SESSIONARCHIVE=""
@@ -62,6 +64,9 @@ SWITCHTERM=0
 DISPLAYMODE="graphic"   # xterm or rxvt or tmux or graphic or ...
 BACKGROUND=0
 REMOTEVIEWER=0          # remote viewer for VNC or SPICE server/display
+VERBOSE=0
+# RECOVER=0
+TMUXID="qemunet"        # tmux session ID
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
@@ -121,7 +126,7 @@ USAGE() {
     echo "       * gnome: same as xterm mode, but using gnome-terminal instead"
     echo "       * xfce4: same as xterm mode, but using xfce4-terminal instead"
     echo "       * tmux: QEMU serial/text mode running within a tmux session (experimental)"
-    echo "       * screen: QEMU serial/text mode running within a screen session (experimental)"
+    echo "       * screen: QEMU serial/text mode running within a screen session (very experimental)"
     echo "       * vnc: use QEMU VNC display (experimental)"
     echo "       * spice: use QEMU SPICE display (experimental)"
     echo "       * none: no graphic (experimental)"
@@ -129,7 +134,7 @@ USAGE() {
     echo "    -l <sysname>: launch a VM in standalone mode to test it..."
     echo "    -L <sysname>: launch a VM in standalone mode using raw disk image (warning: image will be modified)"
     echo "    -D <sysname>: download system image from URL provided in config file"
-    echo "    -b: run qemunet as a background command"
+    echo "    -b: run qemunet as a background command (experimental)"
     echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)"
     echo "    -M: disable mount directory"
     echo "    -f: mount extra disk <session directory>/<hostname>.disk (default)"
@@ -141,6 +146,7 @@ USAGE() {
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
+    #    echo "    -r: recover tmux session (very experimental)"
     exit 0
 }
 
@@ -232,6 +238,10 @@ GETARGS() {
             b)
                 BACKGROUND=1
             ;;
+            # r)
+            #     MODE="SESSION"
+            #     RECOVER=1
+            # ;;
             h)
                 USAGE
             ;;
@@ -258,21 +268,6 @@ CHECKRC() {
     echo "SOCAT: $SOCAT"
     echo "WGET: $WGET"
     
-    # check QEMU version >= 2.1
-    QEMUVERSION=$($QEMU --version |head -1 | cut -d ' ' -f4-)
-    QEMUMAJOR=$(echo $QEMUVERSION | cut -d '.' -f1)
-    QEMUMINOR=$(echo $QEMUVERSION | cut -d '.' -f2)
-    echo "QEMU VERSION: $QEMUMAJOR.$QEMUMINOR ($QEMUVERSION)"
-    
-    if [ "$QEMUMAJOR" -lt "2" ] ; then
-        echo "ERROR: QEMU version must be greater than or equal to 2.1!"
-        exit 1
-    elif [ "$QEMUMAJOR" -eq "2" -a "$QEMUMINOR" -lt "1" ]
-    then
-        echo "ERROR: QEMU version must be greater than or equal to 2.1!"
-        exit 1
-    fi
-    
     # check RC for QEMU & VDE
     if ! [ -x "$(type -P $QEMU)" ] ; then
         echo "ERROR: $QEMU not found!"
@@ -286,6 +281,27 @@ CHECKRC() {
         echo "ERROR: $VDESWITCH not found!"
         exit 1
     fi
+    
+    ### TODO: check qemu version
+    # QEMUVERSION=$($QEMU --version |head -1 | cut -d ' ' -f4-)
+    # QEMUMAJOR=$(echo $QEMUVERSION | cut -d '.' -f1)
+    # QEMUMINOR=$(echo $QEMUVERSION | cut -d '.' -f2)
+    # echo "QEMU VERSION: $QEMUMAJOR.$QEMUMINOR ($QEMUVERSION)"
+    
+    # if [ "$QEMUMAJOR" -lt "2" ] ; then
+    #     echo "ERROR: QEMU version must be greater than or equal to 2.1!"
+    #     exit 1
+    # elif [ "$QEMUMAJOR" -eq "2" -a "$QEMUMINOR" -lt "1" ]
+    # then
+    #     echo "ERROR: QEMU version must be greater than or equal to 2.1!"
+    #     exit 1
+    # fi
+    
+    # check QEMU version >= 2.1
+    echo "QEMU VERSION"
+    $QEMU --version
+    # TODO: check it is >= 2.1
+    [ $? -ne 0 ] && echo "Error: fail to start $QEMU on this machine!" && exit 1
     
     # check wget
     if ! [ -x  "$(type -P $WGET)" ] ; then
@@ -363,9 +379,6 @@ INITSESSION() {
     
     echo "********** Starting QemuNet Session **********"
     
-    ### special tmux init
-    if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-start.sh ; fi
-    
     ### init session directory
     if [ -z "$SESSIONDIR" ] ; then SESSIONDIR="/tmp/$SESSIONID" ; mkdir -p $SESSIONDIR ; fi
     if ! [ -d "$SESSIONDIR" ] ; then echo "ERROR: Session directory \"$SESSIONDIR\" does not exist!" ; exit 1 ; fi
@@ -402,7 +415,7 @@ INITSESSION() {
     # lock session
     LOCK="$SESSIONDIR/lock"
     if [ -e "$LOCK" ] ; then
-        echo "ERROR: Session Locked! Try to remove $LOCK file before restarting."
+        echo "ERROR: Session Locked! Remove $LOCK file before restarting."
         exit 1
     else
         touch $LOCK
@@ -418,6 +431,15 @@ INITSESSION() {
     echo "NETWORK TOPOLOGY: $TOPOLOGY"
     echo "SESSION ARCHIVE: $SESSIONARCHIVE"
     echo "EXTRA ARCHIVE: $EXTARCHIVE"
+    
+    ### START TMUX SERVER
+    if [ "$DISPLAYMODE" = "tmux" ] ; then
+        echo "=> Start tmux server (tmux session $TMUXID)"
+        $QEMUNETDIR/misc/tmux-start.sh $SESSIONDIR
+        [ $? -ne 0 ] && echo "ERROR: TMUX start failure!" && exit 1
+    fi
+    
+    
 }
 
 ### 3) LOAD CONF ###
@@ -440,6 +462,9 @@ LOADCONF() {
         echo "ERROR: File $QEMUNETCFG is missing!"
         exit 1
     fi
+    
+    echo "Loading VM Config File: $QEMUNETCFG"
+    [ $VERBOSE -eq 0 ] && return
     
     # PRINT VM CONF
     for SYSNAME in "${!FS[@]}"; do
@@ -572,9 +597,17 @@ SWITCH() {
     PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
-    CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"
-    echo "[$SWITCHNAME] $CMD"
-    $CMD
+    
+    if [ "$DISPLAYMODE" = "tmux" ] ; then
+        CMD="$VDESWITCH -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"       # disable daemon mode
+        echo "[$SWITCHNAME] $CMD"
+        tmux new-window -t $TMUXID -n $SWITCHNAME bash -c "${CMD[@]}" # detached
+    else
+        CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -M $SWITCHMGMT"    # daemon mode
+        echo "[$SWITCHNAME] $CMD"
+        $CMD
+    fi
+    
     # PID=$(cat $PIDFILE)
     # SWITCHPIDS="$PID $SWITCHPIDS"
     SWPORTNUM[$SWITCHNAME]=1
@@ -599,7 +632,7 @@ HUB() {
     PIDFILE="$SESSIONDIR/$SWITCHNAME.pid"
     if ! [ -d "$SWITCHDIR" ] ; then rm -rf $SWITCHDIR ; fi
     mkdir -p $SWITCHDIR
-    CMD="$VDESWITCH -daemon -s $SWITCHDIR -p $PIDFILE -hub"
+    CMD="$VDESWITCH -d -s $SWITCHDIR -p $PIDFILE -hub"
     echo "[$SWITCHNAME] $CMD"
     $CMD
     # PID=$(cat $PIDFILE)
@@ -748,7 +781,7 @@ HOST() {
     # load external linux kernel (if available)
     if [ "$HOSTSYS" = "linux" -a -r "$HOSTKERNEL" -a -r "$HOSTINITRD" ] ; then
         # append kernel args
-        KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0" # both tty0 and ttyS0 are useful
+        KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0 quiet systemd.show_status=0" # both tty0 and ttyS0 are useful
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         # CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS $OPTKERNELARGS'"
@@ -775,7 +808,6 @@ HOST() {
         elif [ "$THISDISPLAYMODE" = "tmux" ] ; then
         CMD="$CMD -nographic"
         echo "[$HOSTNAME] $CMD"
-        TMUXID="qemunet"
         tmux new-window -t $TMUXID -n $HOSTNAME bash -c "${CMD[@]}" # detached
         # xterm
         elif [ "$THISDISPLAYMODE" = "xterm" -o "$THISDISPLAYMODE" = "rxvt" -o "$THISDISPLAYMODE" = "xfce4" -o "$THISDISPLAYMODE" = "gnome" ] ; then
@@ -888,7 +920,10 @@ WAIT() {
 ### EXIT ###
 
 EXIT() {
+    echo "=> trap exit!"
     source $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR
+    if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
+    if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-exit.sh ; fi
 }
 
 ### START ###
@@ -898,13 +933,15 @@ START() {
     CHECKRC
     echo "********** Loading VM Config **********"
     LOADCONF
+    
+    # trap exit of foreground session
+    [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT # call exit if not background
+    
     # echo "********** Init Session **********"
     if [ "$MODE" = "SESSION" ] ; then
-        [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
         INITSESSION
         source $TOPOLOGY
         elif [ "$MODE" = "STANDALONE" ] ; then
-        [ $BACKGROUND -eq 0 ] && trap 'EXIT' EXIT
         INITSESSION
         HOST "$THESYSNAME" "$THESYSNAME"
         elif [ "$MODE" = "DOWNLOAD" ] ; then
@@ -914,19 +951,16 @@ START() {
         echo "ERROR: Invalid QemuNet mode \"$MODE\"!"
     fi
     echo "=> Your QemuNet session is running in this directory: $SESSIONDIR -> $SESSIONLINK"
-    [ $BACKGROUND -eq 0 ] && WAIT
     
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     
-    # if [ "$DISPLAYMODE" = "tmux" ] ; then
-    #     # $QEMUNETDIR/misc/tmux-attach.sh
-    #     # sleep 900
-    #     sleep infinity
-    # else
-    # WAIT
-    # END
-    # fi
+    # attach tmux
+    # if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-attach.sh ; fi
+    # if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-attach.sh ; fi # TODO: ???
+    if [ "$DISPLAYMODE" = "tmux" ] ; then echo "=> Just launch command \"tmux a\" to attach TMUX session..." ; fi
+    
+    [ $BACKGROUND -eq 0 ] && WAIT
     # trap call EXIT at regular exit!
 }
 
