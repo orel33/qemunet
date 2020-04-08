@@ -349,6 +349,10 @@ CHECKRC() {
     # using virt-manager
     if [ -x "$(type -P virt-host-validate)" ] ; then
         virt-host-validate qemu
+        if [ $ACCEL -eq 1 ] ; then
+            virt-host-validate qemu | grep "FAIL" &> /dev/null
+            [ $? -eq 0 ] && echo "ERROR: fail to enable hardware accelerator!" && exit 1
+        fi
     fi
     
     # check libvirt0 and libvirt-clients for -m option
