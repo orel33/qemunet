@@ -46,6 +46,7 @@ EXTARCHIVE=""
 SESSIONARCHIVE=""
 THESYSNAME=""
 OPTKERNELARGS=""
+USERKERNELARG=0
 
 # mode
 MODE=""  # "SESSION" or "STANDALONE" or "DOWNLOAD"
@@ -67,6 +68,7 @@ REMOTEVIEWER=0          # remote viewer for VNC or SPICE server/display
 VERBOSE=0
 # RECOVER=0
 TMUXID="qemunet"        # tmux session ID
+QUIETBOOT=0             # quiet linux kernel boot (linux only)
 
 # advanced options
 SWMAXNUMPORTS=32    # max number of ports allowed in VDE_SWITCH (default 32)
@@ -135,9 +137,9 @@ USAGE() {
     echo "    -L <sysname>: launch a VM in standalone mode using raw disk image (warning: image will be modified)"
     echo "    -D <sysname>: download system image from URL provided in config file"
     echo "    -b: run qemunet as a background command (experimental)"
-    echo "    -m: mount directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)"
+    echo "    -m: try to mount an external directory <session directory>/<hostname> using 9p/virtio with 'host' tag (default, linux only)"
     echo "    -M: disable mount directory"
-    echo "    -f: mount extra disk <session directory>/<hostname>.disk (default)"
+    echo "    -f: try to mount an extra disk <session directory>/<hostname>.disk (default)"
     echo "    -F: disable mount disk"
     echo "    -k: enable an accelerator: kvm, hvf (default)"
     echo "    -K: disable accelerator (not recommanded, too slow)"
@@ -145,15 +147,16 @@ USAGE() {
     echo "    -V: start remote viewer(s) for VNC or SPICE display mode"
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
+    echo "    -q: quiet linux kernel boot (linux only)"
+    echo "    -u: pass user login to each VM (linux only)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
-    #    echo "    -r: recover tmux session (very experimental)"
     exit 0
 }
 
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:V" OPT; do
+    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:Vqu" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -214,6 +217,12 @@ GETARGS() {
             z)
                 OPTKERNELARGS="$OPTARG"
             ;;
+            q)
+                QUIETBOOT=1
+            ;;
+            u)
+                USERKERNELARG=1
+            ;;
             d)
                 DISPLAYMODE="$OPTARG" # check $DISPLAY MODE
             ;;
@@ -238,10 +247,6 @@ GETARGS() {
             b)
                 BACKGROUND=1
             ;;
-            # r)
-            #     MODE="SESSION"
-            #     RECOVER=1
-            # ;;
             h)
                 USAGE
             ;;
@@ -627,6 +632,11 @@ SWITCH() {
         echo "[$SWITCHNAME] $CMD"
         $CMD &
     fi
+    
+    # save qemu command
+    CMDFILE="$SESSIONDIR/$SWITCHNAME.sh"
+    echo $CMD > $CMDFILE
+    
 }
 
 HUB() {
@@ -641,6 +651,13 @@ HUB() {
     $CMD
     # PID=$(cat $PIDFILE)
     # SWITCHPIDS="$PID $SWITCHPIDS"
+    
+    # TODO: merge ths routine with SWITCH()
+    # BUG: tmux support not available?
+    
+    # save qemu command
+    CMDFILE="$SESSIONDIR/$SWITCHNAME.sh"
+    echo $CMD > $CMDFILE
 }
 
 ### VIRTUAL NETWORK ###
@@ -727,7 +744,7 @@ HOST() {
     if [ $ACCEL -eq 1 ] ; then CMD="$CMD -M accel=kvm:hvf:hax" ; fi # TODO: add option "-cpu host" here or in qemunet.cfg
     
     # specific QEMU options
-    CMD="$CMD $HOSTOPT"
+    CMD="$CMD $HOSTOPT" #  -fda /dev/fd0
     
     # check system image file
     if ! [ -r "$HOSTFS" ] ; then DOWNLOAD $SYSNAME ; fi
@@ -785,9 +802,12 @@ HOST() {
     # load external linux kernel (if available)
     if [ "$HOSTSYS" = "linux" -a -r "$HOSTKERNEL" -a -r "$HOSTINITRD" ] ; then
         # append kernel args
-        KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0 quiet systemd.show_status=0" # both tty0 and ttyS0 are useful
+        # both tty0 and ttyS0 are useful
+        KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0"
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         # CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
+        [ $USERKERNELARG -eq 1 ] && KERNELARGS="$KERNELARGS user=$USER"
+        [ $QUIETBOOT -eq 1 ] && KERNELARGS="$KERNELARGS quiet" # systemd.show_status=false rd.systemd.show_status=false
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS $OPTKERNELARGS'"
     fi
     
@@ -798,14 +818,13 @@ HOST() {
     ### launch qemu command with different display mode (socket, xterm, graphic)
     
     if [ "$THISDISPLAYMODE" = "none" ] ; then # no display
-        CMD="$CMD -nographic"
-        # CMD="$CMD -display none"
+        # CMD="$CMD -nographic"
+        CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
-        bash -c "${CMD[@]}"
+        bash -c "${CMD[@]}" &
         # screen
         elif [ "$THISDISPLAYMODE" = "screen" ] ; then # no display
         CMD="$CMD -nographic"
-        # CMD="$CMD -display none"
         echo "[$HOSTNAME] $CMD"
         screen -S "qemunet:$HOSTNAME" -d -m bash -c "${CMD[@]}" # detached
         # tmux
@@ -846,11 +865,12 @@ HOST() {
         bash -c "${CMD[@]}" &
     fi
     
+    
+    PID=$!
+    
     # save qemu command
     CMDFILE="$SESSIONDIR/$HOSTNAME.sh"
     echo $CMD > $CMDFILE
-    
-    PID=$!
     
     # echo "[$HOSTNAME] pid $PID"
     # next
