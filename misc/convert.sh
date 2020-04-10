@@ -2,6 +2,7 @@
 echo "=> convert an session archive with host directories to an archive with disk images..."
 [ $# -ne 1 ] && echo "$0 <path/to/archive.tgz>" && exit
 
+SCRIPTDIR=$(dirname $(realpath $0))
 ARCHIVE=$1
 ARCHIVE=$(realpath $ARCHIVE)
 BACKUP="$ARCHIVE.bak"
@@ -16,7 +17,7 @@ tar xzf $ARCHIVE -C $TMP
 for HOST in $TMP/* ; do
     if [ -d $HOST ] ; then
         echo "HOST: $HOST"
-        ./misc/create-disk.sh $HOST $HOST.disk
+        $SCRIPTDIR/misc/create-disk.sh $HOST $HOST.disk
         rm -rf $HOST
     fi
 done
