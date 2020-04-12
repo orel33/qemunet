@@ -46,7 +46,6 @@ EXTARCHIVE=""
 SESSIONARCHIVE=""
 THESYSNAME=""
 OPTKERNELARGS=""
-USERKERNELARG=0
 
 # mode
 MODE=""  # "SESSION" or "STANDALONE" or "DOWNLOAD"
@@ -131,7 +130,8 @@ USAGE() {
     echo "       * screen: QEMU serial/text mode running within a screen session (very experimental)"
     echo "       * vnc: use QEMU VNC display (experimental)"
     echo "       * spice: use QEMU SPICE display (experimental)"
-    echo "       * none: no graphic (experimental)"
+    echo "       * none: no display"
+    echo "       * nogaphic: no graphic (useful for a single host in text mode)"
     echo "More Advanced Options:"
     echo "    -l <sysname>: launch a VM in standalone mode to test it..."
     echo "    -L <sysname>: launch a VM in standalone mode using raw disk image (warning: image will be modified)"
@@ -148,7 +148,6 @@ USAGE() {
     echo "    -y: launch VDE switch management console in terminal"
     echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
     echo "    -q: quiet linux kernel boot (linux only)"
-    echo "    -u: pass user login to each VM (linux only)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
     exit 0
 }
@@ -156,7 +155,7 @@ USAGE() {
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:Vqu" OPT; do
+    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:Vq" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -219,9 +218,6 @@ GETARGS() {
             ;;
             q)
                 QUIETBOOT=1
-            ;;
-            u)
-                USERKERNELARG=1
             ;;
             d)
                 DISPLAYMODE="$OPTARG" # check $DISPLAY MODE
@@ -806,7 +802,8 @@ HOST() {
         KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0"
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         # CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
-        [ $USERKERNELARG -eq 1 ] && KERNELARGS="$KERNELARGS user=$USER"
+        local USER=$(id -un)
+        KERNELARGS="$KERNELARGS user=$USER"
         [ $QUIETBOOT -eq 1 ] && KERNELARGS="$KERNELARGS quiet" # systemd.show_status=false rd.systemd.show_status=false
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS $OPTKERNELARGS'"
     fi
@@ -820,6 +817,11 @@ HOST() {
     if [ "$THISDISPLAYMODE" = "none" ] ; then # no display
         # CMD="$CMD -nographic"
         CMD="$CMD -display none"
+        echo "[$HOSTNAME] $CMD"
+        bash -c "${CMD[@]}" &
+        # nographic
+        elif [ "$THISDISPLAYMODE" = "nographic" ] ; then # text mode
+        CMD="$CMD -nographic"
         echo "[$HOSTNAME] $CMD"
         bash -c "${CMD[@]}" &
         # screen
