@@ -1,4 +1,5 @@
-FROM orel33/mydebian:latest
+FROM orel33/minivpl:latest
+
 MAINTAINER Aurelien Esnard <aurelien.esnard@u-bordeaux.fr>
 WORKDIR /home/docker
 ARG DEBIAN_FRONTEND=noninteractive
