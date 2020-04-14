@@ -981,9 +981,7 @@ START() {
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     
-    # attach tmux
-    # if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-attach.sh ; fi
-    # if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-attach.sh ; fi # TODO: ???
+    # explain how to attach tmux & screen
     if [ "$DISPLAYMODE" = "tmux" ] ; then echo "=> Just launch command \"tmux a\" to attach TMUX session..." ; fi
     
     [ $BACKGROUND -eq 0 ] && WAIT
