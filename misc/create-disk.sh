@@ -11,7 +11,7 @@ echo "input dir=$INPUTDIR"
 echo "disk=$DISK"
 echo "mount dir=$MNTDIR"
 
-rm -i $DISK
+[ -f $DISK ]  && rm -i $DISK
 
 [ ! -d $INPUTDIR ] && echo "Error: input directory not found!" && exit 0
 [ -f $DISK ] && echo "Error: disk file already exists!" && exit 0
