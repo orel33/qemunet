@@ -46,6 +46,7 @@ EXTARCHIVE=""
 SESSIONARCHIVE=""
 THESYSNAME=""
 OPTKERNELARGS=""
+USERARG=""
 
 # mode
 MODE=""  # "SESSION" or "STANDALONE" or "DOWNLOAD"
@@ -149,13 +150,14 @@ USAGE() {
     echo "    -i: enable QEMU Slirp interface for Internet access (ping not allowed)"
     echo "    -q: quiet linux kernel boot (linux only)"
     echo "    -z <args>: append linux kernel arguments (linux only)"
+    echo "    -u <user>: pass user as a linux kernel argument (linux only)"
     exit 0
 }
 
 ### PARSE ARGUMENTS ###
 
 GETARGS() {
-    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:Vq" OPT; do
+    while getopts "t:a:s:S:c:l:L:D:imMfFkKxyvd:hbz:Vqu:" OPT; do
         case $OPT in
             t)
                 if [ -n "$MODE" ] ; then USAGE ; fi
@@ -215,6 +217,9 @@ GETARGS() {
             ;;
             z)
                 OPTKERNELARGS="$OPTARG"
+            ;;
+            u)
+                USERARG="$OPTARG"
             ;;
             q)
                 QUIETBOOT=1
@@ -802,8 +807,8 @@ HOST() {
         KERNELARGS="root=/dev/sda1 rw net.ifnames=0 console=ttyS0 console=tty0"
         # ifnames=0 disables the new "consistent" device naming scheme, using instead the classic ethX interface naming scheme.
         # CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append \"$KERNELARGS\""
-        local USER=$(id -un)
-        KERNELARGS="$KERNELARGS user=$USER"
+        [ -z "$USERARG" ] && USERARG=$(id -un)
+        KERNELARGS="$KERNELARGS user=$USERARG"
         [ $QUIETBOOT -eq 1 ] && KERNELARGS="$KERNELARGS quiet" # systemd.show_status=false rd.systemd.show_status=false
         CMD="$CMD -kernel $HOSTKERNEL -initrd $HOSTINITRD -append '$KERNELARGS $OPTKERNELARGS'"
     fi
@@ -981,9 +986,7 @@ START() {
     # echo "=> You can save your session directory as follow: \"cd $SESSIONDIR ; tar cvzSf mysession.tgz * ; cd -\""
     # echo "=> Then, to restore it, type: \"$QEMUNETDIR/qemunet.sh -s mysession.tgz\""
     
-    # attach tmux
-    # if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-attach.sh ; fi
-    # if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-attach.sh ; fi # TODO: ???
+    # explain how to attach tmux & screen
     if [ "$DISPLAYMODE" = "tmux" ] ; then echo "=> Just launch command \"tmux a\" to attach TMUX session..." ; fi
     
     [ $BACKGROUND -eq 0 ] && WAIT
