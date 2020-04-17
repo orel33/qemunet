@@ -1,6 +1,6 @@
 #!/bin/bash
 
-[ $# -gt 2 ] && echo "$0 <disk.img> [<path/to/dir>]" && exit 0
+[ $# -ne 2 -a $# -ne 1 ] && echo "$0 <disk.img> [<path/to/dir>]" && exit 0
 
 DISK=$1
 DISKDIR=$2
