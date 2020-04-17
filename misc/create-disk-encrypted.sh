@@ -30,10 +30,13 @@ sudo mount -o loop,uid=$UID,gid=$UID $DISK $MNTDIR
 # chmod 777 $MNTDIR
 ls -ld $MNTDIR
 
-export PASS
-( cd $INPUTDIR ; tar cvf $MNTDIR/$DISKFILE.tar * )
-openssl enc -in $MNTDIR/$DISKFILE.tar -out $MNTDIR/$DISKFILE.tar.enc -pass env:PASS
-# rm -f $MNTDIR/$DISK.tar
+# export PASS
+# ( cd $INPUTDIR ; tar cvf $MNTDIR/$DISKFILE.tar * )
+# openssl enc -in $MNTDIR/$DISKFILE.tar -out $MNTDIR/$DISKFILE.tar.enc -pass env:PASS
+# rm -f $MNTDIR/$DISKFILE.tar
+
+( cd $INPUTDIR ; zip -P $PASS $MNTDIR/start.zip * )
+
 sudo umount $MNTDIR
 
 # rm -rf $MNDIR
