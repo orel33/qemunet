@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 [ $# -ne 3 ] && echo "$0 <path/to/input/dir> <disk.img> <password>" && exit
 
