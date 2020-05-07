@@ -1,17 +1,22 @@
 #!/bin/bash
 QEMUNETDIR="$(realpath $(dirname $0)/..)"
 
-[ $# -ne 1 ] && echo "Usage: $0 <path/to/session/dir>" && exit
-SESSIONDIR=$1
-[ ! -e $SESSIONDIR ] && echo "Error: session directory not found!" && exit 0
+[ $# -ne 2 ] && echo "Usage: $0 <session_id> <path/to/session/dir>" && exit 1
+SESSIONID=$1
+SESSIONDIR=$2
+[ -z $SESSIONID ] && echo "Error: session ID not found!" && exit 1
+[ ! -e $SESSIONDIR ] && echo "Error: session directory not found!" && exit 1
 
-TMUXID="qemunet"
+# TMUXID="qemunet"
+TMUXID="$SESSIONID"
 TMUXTIMEOUT="4h"
 
-# check if session is alive...
-tmux has-session -t $TMUXID &> /dev/null
+# check if a tmux session "qemunet*" is already alive...
+# tmux has-session -t $TMUXID &> /dev/null
+tmux has-session -t qemunet &> /dev/null
 if [ $? -ne 1 ] ; then
-    echo "ERROR: a TMUX session \"$TMUXID\" is already available!"
+    echo "ERROR: a TMUX session for qemunet is already available!"
+    tmux ls
     echo "=> either attach (\"tmux a\") or kill session (\"tmux kill-session\")"
     exit 1
 fi
@@ -19,7 +24,7 @@ fi
 tmux start-server
 tmux new-session -d -s $TMUXID -n console bash # tmux console #TODO: how to remove this console?
 
-TMUXEXITCMD="sleep $TMUXTIMEOUT ; $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR ; tmux kill-session -t $TMUXID"
+TMUXEXITCMD="sleep $TMUXTIMEOUT ; $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONID $SESSIONDIR"
 echo "=> tmux exit command: $TMUXEXITCMD"
 tmux run-shell -t $TMUXID -b "$TMUXEXITCMD"  # run as a background command in tmux...
 
@@ -27,7 +32,7 @@ tmux set-option -t $TMUXID -g default-shell /bin/bash
 tmux set-option -t $TMUXID -g mouse on # enable to select panes/windows  with mouse (howewer, hold shift key, to copy/paste with mouse)
 tmux set-option -g prefix C-b
 tmux unbind-key x
-tmux bind-key x run-shell "$QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR" \\\; kill-session  # press "C-b x" to kill current session!
+tmux bind-key x run-shell "$QEMUNETDIR/misc/qemunet-exit.sh $SESSIONID $SESSIONDIR" \\\; kill-session  # press "C-b x" to kill current session!
 tmux unbind-key X
 tmux bind-key X kill-session  # press "C-b x" to kill session!
 # tmux bind-key x send-keys "$QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR" Enter \\\; kill-session  # press "C-b x" to kill current session!

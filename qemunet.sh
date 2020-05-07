@@ -445,7 +445,7 @@ INITSESSION() {
     ### START TMUX SERVER
     if [ "$DISPLAYMODE" = "tmux" ] ; then
         echo "=> Start tmux server (tmux session $TMUXID)"
-        $QEMUNETDIR/misc/tmux-start.sh $SESSIONDIR
+        $QEMUNETDIR/misc/tmux-start.sh $SESSIONID $SESSIONDIR
         [ $? -ne 0 ] && echo "ERROR: TMUX start failure!" && exit 1
     fi
     
@@ -952,9 +952,8 @@ WAIT() {
 
 EXIT() {
     echo "=> trap exit!"
-    source $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONDIR
-    if [ "$DISPLAYMODE" = "tmux" ] ; then $QEMUNETDIR/misc/tmux-exit.sh ; fi
-    if [ "$DISPLAYMODE" = "screen" ] ; then $QEMUNETDIR/misc/screen-exit.sh ; fi
+    # source $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONID $SESSIONDIR
+    bash $QEMUNETDIR/misc/qemunet-exit.sh $SESSIONID $SESSIONDIR
 }
 
 ### START ###
