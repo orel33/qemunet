@@ -1,23 +1,19 @@
 #!/bin/bash
 
-[ $# -ne 2 -a $# -ne 1 ] && echo "$0 <disk.img> [<path/to/dir>]" && exit 0
+[ $# -ne 2 ] && echo "$0 <disk.img> <disk dir>" && exit 1
 
 DISK=$1
 DISKDIR=$2
-[ -z "$DISKDIR" ] && DISKDIR=$(mktemp -d)
+[ ! -f $DISK ] && echo "Error: disk file not found!" && exit 1
+[ ! -d "$DISKDIR" ] && echo "Error: target <disk dir> not found!" && exit 1
+MNTDIR=$(mktemp -d)
 
-echo "disk=$DISK"
-echo "target disk dir=$DISKDIR"
+echo "DISK=$DISK"
+echo "DISKDIR=$DISKDIR"
+echo "MNTDIR=$MNTDIR"
 
-# [ ! -d $DISKDIR ] && echo "Error: target disk directory not found!" && exit 0
-[ ! -d $DISKDIR ] && mkdir -p $DISKDIR
-[ ! -f $DISK ] && echo "Error: disk file not found!" && exit 0
-
-sudo mount -o loop,uid=$UID,gid=$UID $DISK $DISKDIR
-# sudo mount -o loop $DISK $DISKDIR
-
-# sudo cp -v -rf $INPUTDIR/* $MNTDIR
-
-echo "Warning! Don't forget to umount $DISKDIR..."
+sudo mount -o loop,uid=$UID,gid=$UID $DISK $MNTDIR
+sudo cp -v -rf $MNTDIR/* $DISKDIR/
+sudo umount $MNTDIR
 
 # eof
