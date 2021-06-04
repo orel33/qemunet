@@ -381,11 +381,11 @@ CHECKRC() {
     #     [ $? -ne 0 ] && echo "ERROR: virt-copy-in not found, but required for -C option!" && exit 1
     # fi
 
-    # check vde support
-    if [ "$MODE" = "SESSION" ] ; then
-        qemu-system-x86_64 -netdev help | grep -i "vde" &> /dev/null
-        [ $? -ne 0 ] && echo "ERROR: VDE support for QEMU not enabled!" && exit 1
-    fi
+    # TODO: check vde support
+    # if [ "$MODE" = "SESSION" ] ; then
+    #     qemu-system-x86_64 -netdev help | grep -i "vde" &> /dev/null
+    #     [ $? -ne 0 ] && echo "ERROR: VDE support for QEMU not enabled!" && exit 1
+    # fi
 }
 
 ### 2) INIT SESSION ###
