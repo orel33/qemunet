@@ -1,5 +1,6 @@
 #!/bin/bash
-IMGDIR="/net/ens/qemunet/images"
+# IMGDIR="/net/ens/qemunet/images"
+IMGDIR="/home/orel/Documents/qemunet/images"
 IMG="$IMGDIR/debian10.img"
 KERNEL="$IMGDIR/debian10.vmlinuz"
 INITRD="$IMGDIR/debian10.initrd"
@@ -15,6 +16,8 @@ reset # reset terminal
 
 ### INPUT ARGS ###
 
+echo $#
+[ $# -ne 1 ] && echo "Usage: $0 name" && exit 1
 NAME="$1"
 
 ### BASIC OPTIONS ###

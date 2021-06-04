@@ -1,0 +1,21 @@
+FROM gblin/minivpl
+# FROM orel33/minivpl:latest
+LABEL maintainer="aurelien.esnard@u-bordeaux.fr"
+# MAINTAINER Aurelien Esnard <aurelien.esnard@u-bordeaux.fr>
+WORKDIR /home/docker
+ARG DEBIAN_FRONTEND=noninteractive
+
+
+### apt tools
+RUN apt-get update
+RUN apt-get install -yq build-essential apt-utils apt-file gdebi
+
+### set locales
+RUN apt-get install -yq locales-all
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+### qemu
+RUN apt-get install -y qemu libvirt-clients
+
