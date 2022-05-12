@@ -591,7 +591,7 @@ CREATEQCOW() {
     HOSTQCOW=$2
     IMGCMD=""
     # if [ "$RMQCOW2" -eq 1 ] ; then rm -f "$HOSTQCOW" ; fi
-    if ! [ -r "$HOSTQCOW" ] ; then IMGCMD="$QEMUIMG create -q -b $HOSTFS -f qcow2 $HOSTQCOW" ;
+    if ! [ -r "$HOSTQCOW" ] ; then IMGCMD="$QEMUIMG create -q -b $HOSTFS -F raw -f qcow2 $HOSTQCOW" ;
 else IMGCMD="$QEMUIMG rebase -q -u -b $HOSTFS $HOSTQCOW" ; fi
     echo "[$(basename $HOSTQCOW)] $IMGCMD"
     $IMGCMD
