@@ -381,11 +381,11 @@ CHECKRC() {
     #     [ $? -ne 0 ] && echo "ERROR: virt-copy-in not found, but required for -C option!" && exit 1
     # fi
 
-    # check vde support
-    if [ "$MODE" = "SESSION" ] ; then
-        qemu-system-x86_64 -netdev help | grep -i "vde" &> /dev/null
-        [ $? -ne 0 ] && echo "ERROR: VDE support for QEMU not enabled!" && exit 1
-    fi
+    # TODO: check vde support
+    # if [ "$MODE" = "SESSION" ] ; then
+    #     qemu-system-x86_64 -netdev help | grep -i "vde" &> /dev/null
+    #     [ $? -ne 0 ] && echo "ERROR: VDE support for QEMU not enabled!" && exit 1
+    # fi
 }
 
 ### 2) INIT SESSION ###
@@ -590,7 +590,7 @@ CREATEQCOW() {
     HOSTQCOW=$2
     IMGCMD=""
     # if [ "$RMQCOW2" -eq 1 ] ; then rm -f "$HOSTQCOW" ; fi
-    if ! [ -r "$HOSTQCOW" ] ; then IMGCMD="$QEMUIMG create -q -b $HOSTFS -f qcow2 $HOSTQCOW" ;
+    if ! [ -r "$HOSTQCOW" ] ; then IMGCMD="$QEMUIMG create -q -b $HOSTFS -F raw -f qcow2 $HOSTQCOW" ;
 else IMGCMD="$QEMUIMG rebase -q -u -b $HOSTFS $HOSTQCOW" ; fi
     echo "[$(basename $HOSTQCOW)] $IMGCMD"
     $IMGCMD
