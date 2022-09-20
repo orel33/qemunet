@@ -34,6 +34,7 @@ QEMUNET="$0"
 # QEMUNETDIR="$(realpath $(dirname $QEMUNET))"
 QEMUNETDIR="$(dirname $(readlink -f $QEMUNET))"
 QEMUNETCFG="$QEMUNETDIR/qemunet.cfg"
+[ -r $PWD/qemunet.cfg ] && QEMUNETCFG="$PWD/qemunet.cfg"
 
 ### PARAMETERS ###
 
