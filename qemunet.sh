@@ -430,11 +430,10 @@ INITSESSION() {
     # lock session
     LOCK="$SESSIONDIR/lock"
     if [ -e "$LOCK" ] ; then
-        echo "ERROR: Session Locked! Remove $LOCK file before restarting."
-        exit 1
-    else
-        touch $LOCK
+        echo "WARNING: Session Locked! Lock file removed..."
     fi
+    touch $LOCK
+ 
 
     ### PRINT SESSION
     echo "MODE: $MODE"
