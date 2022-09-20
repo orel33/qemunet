@@ -304,6 +304,10 @@ Follow branch qemunetweb on github.
 
 * add a "-e" option to manually enable an Ethernet network card... (Useful when using -l or -L ?)
 
+### BUGS TO FIX
+
+* This command `./qemunet.sh -l debian -i` fails after download, because the expected archive is `debian.tgz` instead of `debian10.tgz`.
+
 ### Contact Me
 
 <mailto:aurelien.esnard@u-bordeaux.fr>
