@@ -911,8 +911,8 @@ TRUNK(){
     SWPORTNUMTRUNK[$SWITCH2]=$(expr ${SWPORTNUMTRUNK[$SWITCH2]} + 1)
 
     # a strange behavior was observed with the following command, thus we need to move to a writable directory before calling dpipe ...
-    echo "[$SWITCH1]---[$SWITCH2] dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SWITCH2"
-    (cd $SESSIONDIR; dpipe vde_plug -p ${SWPORTNUMTRUNK[$SWITCH1]} $SESSIONDIR/switch/$SWITCH1  = vde_plug  -p ${SWPORTNUMTRUNK[$SWITCH2]} $SESSIONDIR/switch/$SWITCH2  >& /dev/null &)
+    echo "[$SWITCH1]---[$SWITCH2] dpipe vde_plug --port ${SWPORTNUMTRUNK[$SWITCH1]} switch/$SWITCH1 = vde_plug --port ${SWPORTNUMTRUNK[$SWITCH2]} switch/$SWITCH2"
+    (cd $SESSIONDIR; dpipe vde_plug --port ${SWPORTNUMTRUNK[$SWITCH1]} $SESSIONDIR/switch/$SWITCH1  = vde_plug --port ${SWPORTNUMTRUNK[$SWITCH2]} $SESSIONDIR/switch/$SWITCH2  >& /dev/null &)
 
     PID=$!  # FIXME: use pid of dpipe command instead of subshell?
     # TRUNKPIDS="$TRUNKPIDS $PID"
