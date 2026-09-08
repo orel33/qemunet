@@ -82,17 +82,19 @@ VDESWITCH="vde_switch"
 SOCAT="socat"
 WGET="wget"
 
+POS=0
 TERMCMD () {
     local THISTERM="$1"
     local THISNAME="$2"
+    local POS="$3"
     if [ "$THISTERM" = "xterm" ] ; then
-        echo "xterm -fg white -bg black -T $THISNAME -e" ;
+        echo "xterm -fg white -bg black -T $THISNAME -geometry +${POS}+${POS} -e" ;
         elif [ "$THISTERM" = "rxvt" ] ; then
-        echo "rxvt -bg Black -fg White -title $THISNAME -e bash -c" ;
+        echo "rxvt -bg Black -fg White -title $THISNAME -geometry +${POS}+${POS} -e bash -c" ;
         elif [ "$THISTERM" = "gnome" ] ; then
-        echo "gnome-terminal -- bash -c" ;
+        echo "gnome-terminal --geometry=+${POS}+${POS} -- bash -c" ;
         elif [ "$THISTERM" = "xfce4" ] ; then
-        echo "xfce4-terminal -T $THESYSNAME -x bash -c" ;
+        echo "xfce4-terminal -T $THESYSNAME --geometry=+${POS}+${POS} -x bash -c" ;
     else
         echo "ERROR: Invalid terminal display mode \"$THISTERM\"!"
     fi
@@ -133,7 +135,7 @@ USAGE() {
     echo "       * vnc: use QEMU VNC display (experimental)"
     echo "       * spice: use QEMU SPICE display (experimental)"
     echo "       * none: no display"
-    echo "       * nogaphic: no graphic (useful for a single host in text mode)"
+    echo "       * nographic: no graphic (useful for a single host in text mode)"
     echo "More Advanced Options:"
     echo "    -l <sysname>: launch a VM in standalone mode to test it..."
     echo "    -L <sysname>: launch a VM in standalone mode using raw disk image (warning: image will be modified)"
@@ -633,7 +635,8 @@ SWITCH() {
     fi
     # launch VDE switch management console in xterm terminal
     if [ "$SWITCHTERM" -eq 1 ] ; then
-        CMD=$(TERMCMD xterm $SWITCHNAME)
+        CMD=$(TERMCMD xterm $SWITCHNAME $POS)
+        POS=$((POS + 32))
         CMD="${CMD} vdeterm $SWITCHMGMT"
         echo "[$SWITCHNAME] $CMD"
         $CMD &
@@ -848,7 +851,8 @@ HOST() {
         # xterm
         elif [ "$THISDISPLAYMODE" = "xterm" -o "$THISDISPLAYMODE" = "rxvt" -o "$THISDISPLAYMODE" = "xfce4" -o "$THISDISPLAYMODE" = "gnome" ] ; then
         CMD="$CMD -nographic"
-        XCMD=$(TERMCMD $THISDISPLAYMODE $HOSTNAME)
+        XCMD=$(TERMCMD $THISDISPLAYMODE $HOSTNAME $POS)
+        POS=$((POS + 32))
         echo "[$HOSTNAME] $XCMD $CMD"
         $XCMD "${CMD[@]}" &
         # vnc
